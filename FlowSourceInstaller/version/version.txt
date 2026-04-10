@@ -1,1 +1,1 @@
-image: flowsource:1.0.5
+image: flowsource:1.0.5-pipelineTest1
