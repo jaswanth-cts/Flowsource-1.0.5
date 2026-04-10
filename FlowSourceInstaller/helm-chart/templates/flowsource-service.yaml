@@ -1,0 +1,22 @@
+# kubernetes/flowsource-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: flowsource
+  namespace: {{ .Values.global.namespace }}
+  {{- if .Values.flowsource.service.annotations }}
+  annotations:
+    {{- .Values.flowsource.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.flowsource.service.type }}
+  selector:
+    app: flowsource
+  ports:
+    - name: http
+      port: 7007
+      targetPort: http
+      protocol: TCP
+      {{- if eq .Values.flowsource.service.type "NodePort" }}
+      nodePort: {{ .Values.flowsource.service.nodePort }}
+      {{- end }}

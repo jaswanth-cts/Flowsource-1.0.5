@@ -1,0 +1,120 @@
+{
+  "name": "root",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "20 || 22"
+  },
+  "scripts": {
+    "dev": "yarn workspaces foreach -A --include backend --include app --parallel --jobs unlimited -v -i run start",
+    "start": "yarn workspace app start",
+    "start-backend": "yarn workspace backend start",
+    "build:backend": "yarn workspace backend build",
+    "build:all": "backstage-cli repo build --all",
+    "build-image": "yarn workspace backend build-image",
+    "tsc": "tsc",
+    "tsc:full": "tsc --skipLibCheck false --incremental false",
+    "clean": "backstage-cli repo clean",
+    "test": "backstage-cli repo test",
+    "test:all": "backstage-cli repo test --coverage",
+    "test:e2e": "playwright test",
+    "fix": "backstage-cli repo fix",
+    "lint": "backstage-cli repo lint --since origin/master",
+    "lint:all": "backstage-cli repo lint",
+    "prettier:check": "prettier --check .",
+    "new": "backstage-cli new"
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "plugins/*"
+    ]
+  },
+  "dependenciesMeta": {
+    "isolated-vm": {
+      "built": true
+    }
+  },
+  "devDependencies": {
+    "@backstage/cli": "0.30.0",
+    "@backstage/e2e-test-utils": "0.1.1",
+    "@eslint/compat": "1.2.6",
+    "@eslint/js": "9.20.0",
+    "@playwright/test": "1.32.3",
+    "@spotify/prettier-config": "12.0.0",
+    "@types/glob": "^7.2.0",
+    "concurrently": "8.0.0",
+    "eslint": "9.20.1",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-react": "7.37.4",
+    "eslint-plugin-unused-imports": "4.1.4",
+    "globals": "15.15.0",
+    "lerna": "7.3.0",
+    "node-gyp": "10.0.0",
+    "prettier": "2.3.2",
+    "typescript": "5.4.5",
+    "typescript-eslint": "8.24.0"
+  },
+  "resolutions": {
+    "@backstage/plugin-scaffolder": "1.34.3",
+    "@backstage/core-plugin-api": "1.12.0",
+    "@backstage/core-app-api": "1.19.2",
+    "@backstage/plugin-auth-node": "0.6.9",
+    "@backstage/plugin-permission-node": "0.10.6",
+    "@types/react": "18.3.17",
+    "@types/react-dom": "18.3.5",
+    "swagger-ui-react": "5.10.5",
+    "@backstage/plugin-scaffolder-backend-module-azure/@backstage/plugin-scaffolder-node": "0.12.5-next.1",
+    "@aws/aws-core-plugin-for-backstage-scaffolder-actions/@backstage/plugin-scaffolder-node": "0.12.5-next.1",
+    "axios": "1.8.4",
+    "express": "4.22.0",
+    "@types/express": "4.17.21",
+    "@backstage/plugin-auth-backend/follow-redirects": "1.15.9",
+    "mysql2": "3.14.0",
+    "send": "0.19.1",
+    "tar-fs": "2.1.2",
+    "xml-crypto": "6.1.2",
+    "tough-cookie": "4.1.4",
+    "@azure/identity": "4.9.0",
+    "@babel/runtime": "7.27.0",
+    "body-parser": "1.20.3",
+    "fast-xml-parser": "5.4.1",
+    "@backstage/plugin-auth-backend/@grpc/grpc-js": "1.13.4",
+    "braces": "3.0.3",
+    "cookie": "0.7.2",
+    "@backstage/core-components/prismjs": "1.30.0",
+    "serve-static": "1.16.2",
+    "tar": "7.5.9",
+    "@actions/github/undici": "5.29.0",
+    "glob/cross-spawn": "7.0.6",
+    "jsonpath-plus": "10.3.0",
+    "form-data": "4.0.4",
+    "jose": "5.10.0",
+    "sha.js": "2.4.12",
+    "backstage-plugin-techdocs-addon-mermaid/mermaid": "11.12.2",
+    "qs": "6.14.1",
+    "fast-loops": "1.1.4",
+    "linkifyjs": "4.3.2",
+    "jws": "4.0.1",
+    "@node-saml/node-saml": "5.1.0",
+    "diff": "8.0.3",
+    "lodash-es": "4.17.23",
+    "lodash": "4.17.23",
+    "dagre-d3-es": "7.0.14",
+    "minimatch": "10.2.2",
+    "@backstage/backend-common": "0.25.0-next.2",
+    "@backstage/backend-plugin-api": "1.6.2",
+    "bn.js": "5.2.3"
+  },
+  "prettier": "@backstage/cli/config/prettier",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "packageManager": "yarn@4.7.0"
+}

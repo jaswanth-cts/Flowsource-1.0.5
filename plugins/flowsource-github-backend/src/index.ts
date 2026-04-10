@@ -1,0 +1,1 @@
+export { flowsourceGithubBackendPlugin as default } from './plugin';

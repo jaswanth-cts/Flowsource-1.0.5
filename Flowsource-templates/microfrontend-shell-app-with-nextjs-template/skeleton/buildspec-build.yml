@@ -1,0 +1,191 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    # Use your own secrets manager name here instead of 'flowsource-ci-cd-template-secrets'
+    AWS_ECR_URL: flowsource-ci-cd-template-secrets:AWS_ECR_URL
+    CHECKMARX_BASE_URL: flowsource-ci-cd-template-secrets:CHECKMARX_BASE_URL
+    CHECKMARX_USERNAME: flowsource-ci-cd-template-secrets:CHECKMARX_USERNAME
+    CHECKMARX_PASSWORD: flowsource-ci-cd-template-secrets:CHECKMARX_PASSWORD
+    CX_TEAM: flowsource-ci-cd-template-secrets:CX_TEAM
+    SONAR_URL: flowsource-ci-cd-template-secrets:SONAR_URL
+    SONAR_TOKEN: flowsource-ci-cd-template-secrets:SONAR_TOKEN
+    NEXT_PUBLIC_UNLEASH_FRONTEND_API_TOKEN: flowsource-ci-cd-template-secrets:NEXT_PUBLIC_UNLEASH_FRONTEND_API_TOKEN
+    BLACKDUCK_DETECT_URL: flowsource-ci-cd-template-secrets:BLACKDUCK_DETECT_URL
+    BLACKDUCK_URL: flowsource-ci-cd-template-secrets:BLACKDUCK_URL
+    BLACKDUCK_TOKEN: flowsource-ci-cd-template-secrets:BLACKDUCK_TOKEN
+  variables: 
+    REPOSITORY_NAME: ${{values.repo_name}}
+    AWS_REGION: ${{values.aws_code_region}}
+    REMOTE_URL: http://localhost:3001
+    CX_PROJECT: ${{values.checkmarxProjectName}}
+    BDH_PROJECT: ${{values.blackduckProjectName}}
+    SONAR_PROJECT: ${{values.sonarProjectKey}}
+    RUN_BLACKDUCK: "true" # Set to "true" to enable BlackDuck scan
+    RUN_SONARSCAN: "true"
+    RUN_CHECKMARX: "true"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      # Install Checkmarx CLI & Run Scan
+      - |
+        if [ "$RUN_CHECKMARX" = "true" ]
+        then
+          echo "Installing Checkmarx CLI"
+          mkdir -p /usr/local/bin/checkmarx-cli
+          curl -o /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -L https://download.checkmarx.com/9.5.0/Plugins/CxConsolePlugin-1.1.30.zip
+          unzip /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -d /usr/local/bin/checkmarx-cli/
+          chmod +x /usr/local/bin/checkmarx-cli/runCxConsole.sh
+          sourceLocation=$(pwd)
+          
+          echo "...........* RUNNING CHECKMARX SCAN *.........."
+      
+          /usr/local/bin/checkmarx-cli/runCxConsole.sh Scan -v \
+            -CxServer "$CHECKMARX_BASE_URL" \
+            -CxUser "$CHECKMARX_USERNAME" \
+            -CxPassword "$CHECKMARX_PASSWORD" \
+            -ProjectName "$CX_TEAM\\$CX_PROJECT" \
+            -LocationType "folder" \
+            -LocationPath "$sourceLocation/" \
+            -preset "Cognizant Default Preset" \
+            -ReportPDF "$sourceLocation/$CX_PROJECT.pdf"
+        else
+          echo "...........* SKIPPING CHECKMARX SCAN *.........."
+        fi  
+
+      # Extract SonarQube certificate 
+      - |
+        echo "Checking SonarQube URL protocol..."
+        case "$SONAR_URL" in
+          https://*)
+            echo "HTTPS detected - extracting SonarQube SSL certificate..."
+            SONAR_HOST_PORT=$(echo "$SONAR_URL" | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+            SONAR_HOST=$(echo "$SONAR_HOST_PORT" | cut -d: -f1)
+            SONAR_PORT=$(echo "$SONAR_HOST_PORT" | cut -d: -f2)
+            [ -z "$SONAR_PORT" ] || [ "$SONAR_PORT" = "$SONAR_HOST" ] && SONAR_PORT=443
+
+            echo "Connecting to $SONAR_HOST:$SONAR_PORT to extract certificate..."
+            openssl s_client -connect "$SONAR_HOST:$SONAR_PORT" -servername "$SONAR_HOST" -showcerts </dev/null 2>/dev/null | \
+              awk '/BEGIN CERT/{s=1} s{print} /END CERT/{exit}' > sonarqube.crt
+
+            if [ -s sonarqube.crt ]; then
+              echo "SonarQube certificate extracted successfully"
+              openssl x509 -in sonarqube.crt -text -noout | head -20
+            else
+              echo "Failed to extract certificate"
+              exit 1
+            fi
+
+            echo "Importing SonarQube certificate into Java truststore..."
+            TRUSTSTORE="$JAVA_HOME/lib/security/cacerts"
+            if [ -f "$TRUSTSTORE" ]; then
+              keytool -import -noprompt -trustcacerts \
+                -alias "sonarqube-$(date +%s)" \
+                -file sonarqube.crt \
+                -keystore "$TRUSTSTORE" \
+                -storepass changeit
+              echo "Certificate imported into Java truststore"
+            else
+              echo "Java truststore not found at $TRUSTSTORE"
+              exit 1
+            fi
+            ;;
+          http://*)
+            echo "HTTP detected - skipping certificate extraction"
+            touch sonarqube.crt
+            ;;
+          *)
+            echo "Unknown protocol in SONAR_URL: $SONAR_URL"
+            exit 1
+            ;;
+        esac
+
+      # ---------- Sonar Scanner ----------
+      - |
+        echo "Installing Sonar Scanner..."
+        wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+        unzip -q sonar-scanner-cli-5.0.1.3006-linux.zip
+        mv sonar-scanner-5.0.1.3006-linux /opt/sonar-scanner
+        export PATH=$PATH:/opt/sonar-scanner/bin
+
+      # Install Dependencies
+      - echo "Installing Dependencies..."
+      - yarn install
+      # Run Blackduck Scan
+      - |
+        if [ "$RUN_BLACKDUCK" = "true" ]
+        then
+        echo "...........* RUNNING BLACKDUCK SCAN *.........."
+        curl -s -L "${BLACKDUCK_DETECT_URL}" | bash -s -- \
+          --blackduck.url=$BLACKDUCK_URL \
+          --blackduck.api.token=$BLACKDUCK_TOKEN \
+          --detect.project.name="$BDH_PROJECT" \
+          --detect.project.version.name="ver.1" \
+          --blackduck.trust.cert=true \
+          --detect.timeout=3600 \
+          --detect.detector.search.depth=0 \
+          --detect.tools=ALL,IAC_SCAN \
+          --detect.blackduck.signature.scanner.individual.file.matching=ALL \
+          --detect.detector.search.continue=true \
+          --logging.level.com.synopsys.integration=DEBUG \
+          --detect.risk.report.pdf=true \
+          --detect.risk.report.pdf.path="report" \
+          --detect.blackduck.signature.scanner.snippet.matching=SNIPPET_MATCHING \
+          --detect.excluded.directories=.git
+        else
+          echo "...........* SKIPPING BLACKDUCK SCAN *.........."
+        fi
+
+
+  build:
+    commands:
+      - echo "Building the Next.js Application..."
+      - yarn build
+      # Run SonarQube Scanner
+      - |
+        if [ "$RUN_SONARSCAN" = "true" ]; then
+          echo "...........* RUNNING SONARQUBE SCAN *.........."
+          echo "$SONAR_PROJECT:$SONAR_PROJECT"
+          echo "Sonar URL is $SONAR_URL"
+          export PATH=$PATH:/opt/sonar-scanner/bin
+
+          case "$SONAR_URL" in
+            https://*)
+              echo "Testing SonarQube HTTPS connection..."
+              export SONAR_SCANNER_OPTS="-Djavax.net.ssl.trustStore=$JAVA_HOME/lib/security/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+              curl -v --cacert sonarqube.crt -u "$SONAR_TOKEN:" "$SONAR_URL/api/server/version"
+              ;;
+            http://*)
+              echo "Testing SonarQube HTTP connection..."
+              curl -v -u "$SONAR_TOKEN:" "$SONAR_URL/api/server/version"
+              ;;
+          esac
+          sonar-scanner \
+            -Dsonar.projectKey="$SONAR_PROJECT" \
+            -Dsonar.sources=. \
+            -Dsonar.exclusions="node_modules/**,cicd/**,coverage/**,out/**,jest.config.js,jest.setup.js,next.config.mjs" \
+            -Dsonar.host.url="$SONAR_URL" \
+            -Dsonar.login="$SONAR_TOKEN" \
+            -Dsonar.coverage.jacoco.xmlReportPaths=./coverage/jacoco.xml \
+            -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info
+ 
+        else
+          echo "...........* SKIPPING SONARQUBE SCAN *.........."
+        fi
+
+  post_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ECR_URL
+      - REPOSITORY_URI=$AWS_ECR_URL/$REPOSITORY_NAME
+      - echo $REPOSITORY_URI
+      - echo "Building the Docker image..."
+      - docker build -t $REPOSITORY_URI:latest .
+      - echo "Build completed on `date`"
+      - echo "Pushing the Docker image..."
+      - docker push $REPOSITORY_URI:latest
+      - echo "Push completed on `date`"
+      - echo "******** DONE ***********"

@@ -1,0 +1,135 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: springboot-aws-ci-pipeline-template
+  title: Spring Boot With AWS CI pipeline
+  description: Create a simple Java SpringBoot Application With AWS Code Pipeline
+  tags:
+  - java
+  - springboot
+  - cicd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - repo_name
+    - default_branch
+    - name
+    - connection_arn
+    - java_package_name
+    - java_group_id
+    - java_artifact_id
+    - sonarProjectKey
+    - checkmarxProjectName
+    - blackduckProjectName
+    properties:
+      repo_name:
+        title: Repository Name
+        type: string
+        description: Name of the Repository
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Default name of the branch for the repository. eg('main' or 'master')
+      name:
+        title: Name
+        type: string
+        description: Unique name of the component
+        ui:field: EntityNamePicker
+      connection_arn:
+        title: AWS Connection Arn
+        type: string
+        description: AWS Connection Arn
+      java_package_name:
+        title: Java Package Name
+        type: string
+        description: Name for the java package. eg (io.backstage.blah)
+      java_group_id:
+        title: Java Group ID
+        type: string
+        description: Name for the java app Group ID. eg (io.backstage.blah)
+      java_artifact_id:
+        title: Java Artifact ID
+        type: string
+        description: Name for the java app Artifact ID. eg (io.backstage.blah)
+        ui:field: ValidationField
+        ui:options:
+          regex: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+          errorMessage: Must start and end with a letter or number, and can contain letters, numbers, hyphens, and dots in between.Maximum length is 50 characters.
+      description:
+        title: Description
+        type: string
+        description: Help others understand what this website is for.
+      sonarProjectKey:
+        title: Project Key of Sonarqube
+        type: string
+        description: Name of the Sonarqube Project Key
+        ui:autofocus: true
+      checkmarxProjectName:
+        title: Project Name of Checkmarx
+        type: string
+        description: Name of the Project for Checkmarx Scan
+        ui:autofocus: true
+      blackduckProjectName:
+        title: Project Name of Blackduck
+        type: string
+        description: Name of the Project for Blackduck Scan
+        ui:autofocus: true
+  
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        repo_name: ${{ parameters.repo_name }}
+        default_branch: ${{ parameters.default_branch }}
+        name: ${{ parameters.name }}
+        connection_arn: ${{ parameters.connection_arn }}
+        description: ${{ parameters.description }}
+        artifact_id: ${{ parameters.java_artifact_id }}
+        group_id: ${{ parameters.java_group_id }}
+        java_package_name: ${{ parameters.java_package_name }}
+        java_package_name_slash: ${{ parameters.java_package_name.replaceAll('.', '/') }}
+        branchName: ${{ parameters.branchName }}
+        sonarProjectKey: ${{ parameters.sonarProjectKey }}
+        checkmarxProjectName: ${{ parameters.checkmarxProjectName }}
+        blackduckProjectName: ${{ parameters.blackduckProjectName }}
+        http_port: 8080
+  
+  - id: publish
+    name: Publish
+    action: aws:codecommit:publish
+    input:
+      repositoryName: ${{parameters.repo_name}}
+      defaultBranch: ${{parameters.default_branch}}
+      
+  - id: apply-pipeline
+    name: Create Aws Pipeline
+    action: aws:pipeline:create
+    input:
+      pipelineName: ${{parameters.repo_name}}-pipeline
+      projectName: ${{parameters.repo_name}}-build-project
+      repositoryName: ${{parameters.repo_name}}
+      branchName: ${{ parameters.default_branch }}
+      buildSpec: buildspec-build.yml
+      connection_arn: ${{ parameters.connection_arn }}
+      
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      catalogInfoUrl: https://${{parameters.connection_arn}}.console.aws.amazon.com/codesuite/codecommit/repositories/${{parameters.repo_name}}/browse/refs/heads/${{parameters.default_branch}}/--/catalog-info.yaml?region=${{parameters.connection_arn}}
+
+  
+  output:
+    links:
+    - title: Repository
+      url: https://${{parameters.connection_arn}}.console.aws.amazon.com/codesuite/codecommit/repositories/${{parameters.repo_name}}/browse/refs/heads/${{parameters.default_branch}}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

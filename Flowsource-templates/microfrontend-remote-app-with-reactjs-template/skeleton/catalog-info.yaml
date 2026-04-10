@@ -1,0 +1,32 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{values.name | dump}}
+  {%- if values.description %}
+  description: ${{values.description | dump}}
+  {%- endif %}
+  annotations:
+    github.com/project-slug: ${{values.destination.owner + "/" + values.destination.repo}}
+    backstage.io/techdocs-ref: dir:.
+    # Add the following annotation to the component to enable the AWS CI/CD plugin
+    flowsource/aws-pipelines: ${{values.pipelineName}}
+    flowsource/aws-repo-name: ${{values.repo_name}}
+    flowsource/aws-region: ${{values.aws_code_region}}
+    flowsource/durationInDays: '60'
+    flowsource/aws-project-name: ${{values.projectName}}
+    # Add the following annotation to the component to enable the Code Quality plugin
+    flowsource/sonarqube-project-key: ${{values.sonarProjectKey}}
+    # Add the following annotation to the component to enable the Github PR plugin 
+    flowsource/github-repo-owner: ${{values.destination.owner}}
+    flowsource/github-repo-name: ${{values.repo_name}}
+    # Add the following annotation to the component to enable the Checkmarx plugin
+    flowsource/checkmarx-project-id: ${{values.checkmarxProjectName}}
+    # Add the following annotation to the component to enable the Blackduck plugin
+    flowsource/blackduck-project-id: ${{values.blackduckProjectName}}
+    # Kubernetes plugin 
+    'backstage.io/kubernetes-namespace': ${{values.namespace}}
+    'backstage.io/kubernetes-label-selector': 'app=${{values.appName}}'
+spec:
+  type: website
+  lifecycle: experimental
+  owner: ${{values.owner | dump}}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settings-config
+data:
+  recovery_time_secs: "60"
+  failure_threshold: "5"
+  max_attempts: "3"
+  max_concurrency: "5"
+  max_capacity: "10"
+  max_executions: "3.0"
+  per_time_secs: "10.0"

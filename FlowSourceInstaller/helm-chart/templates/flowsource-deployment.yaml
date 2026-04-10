@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowsource
+  namespace: {{ .Values.global.namespace }}
+
+spec:
+  replicas: {{ .Values.global.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: flowsource
+
+  template:
+    metadata:
+      labels:
+        app: flowsource
+        {{- if .Values.flowsource.flowsourceDeploy.serviceAccount.workloadlabel }}
+        {{ .Values.flowsource.flowsourceDeploy.serviceAccount.workloadlabel }}
+        {{- end }}
+    spec:
+      {{- if .Values.flowsource.flowsourceDeploy.serviceAccount }}
+      serviceAccountName: {{ .Values.flowsource.flowsourceDeploy.serviceAccount.name }}
+      {{- end }}
+      containers:
+
+        - name: flowsource
+          image: {{ .Values.flowsource.flowsourceDeploy.image }}
+          imagePullPolicy: {{ .Values.flowsource.flowsourceDeploy.imagePullPolicy }}
+
+          resources:
+            requests:
+              memory: "1024Mi"
+              cpu: "500m"
+            limits:
+              memory: "1500Mi"
+              cpu: "1000m"
+
+          ports:
+            - name: http
+              containerPort: 7007
+
+          envFrom:
+            - configMapRef:
+                name: flowsource-cm
+            - secretRef:
+                name: flowsource-secrets
+
+                # Uncomment if health checks are enabled in your app:
+                # https://backstage.io/docs/plugins/observability#health-checks
+                #          readinessProbe:
+                #            httpGet:
+                #              port: 7007
+                #              path: /healthcheck
+                #          livenessProbe:
+                #            httpGet:
+                #              port: 7007
+                #              path: /healthcheck
+
+          volumeMounts:
+          - name: "app-config-yaml"
+            mountPath: "/app/app-config.yaml"
+            subPath: "app-config.yaml"
+          - name: "all-configuration-yamls"
+            mountPath: "/app/configurations"
+          - name: chatbot-jsons
+            mountPath: /app/chatbot
+          {{- if .Values.cacerts }}
+          - name: "ca-certs-yaml"
+            mountPath: "/app/cacerts"
+          {{- end }}
+          {{- if .Values.flowsource.flowsourceSecrets.useSecretProvider }}            
+          - mountPath: /mnt/secrets-store
+            name: secrets-store-inline
+            readOnly: true
+          {{- end }}
+      volumes:
+        - name: "app-config-yaml"
+          configMap:
+            name: "app-config-yaml"
+        - name: "all-configuration-yamls"
+          configMap:
+            name: "all-configuration-yamls"
+        - name: chatbot-jsons
+          configMap:
+            name: chatbot-jsons
+        {{- if .Values.cacerts }}
+        - name: "ca-certs-yaml"
+          configMap:
+            name: "ca-certs-yaml"
+        {{- end }}
+        {{- if .Values.flowsource.flowsourceSecrets.useSecretProvider }}
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: flowsource-secrets-provider
+        {{- end }}      
+      restartPolicy: Always
+
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64

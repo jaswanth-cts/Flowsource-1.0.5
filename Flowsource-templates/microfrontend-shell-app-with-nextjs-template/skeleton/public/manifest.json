@@ -1,0 +1,33 @@
+{
+    "name": "Demo Microfrontend App",
+    "short_name": "Demo App",
+    "description": "This is a sample application demonstrates Microfrontend Shell Application which is built using Next.js and Serwist ",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#fff",
+    "theme_color": "#fff",
+    "icons": [
+      {
+        "src": "/favicon.icon",
+        "sizes": "any",
+        "type": "image/x-icon"
+      },
+      {
+        "src": "/icons/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "maskable"
+      },
+      {
+        "src": "/icons/icon-384.png",
+        "sizes": "384x384",
+        "type": "image/png"
+      },
+      {
+        "src": "/icons/icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+}

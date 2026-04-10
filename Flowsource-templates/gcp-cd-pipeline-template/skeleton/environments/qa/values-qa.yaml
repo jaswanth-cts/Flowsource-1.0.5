@@ -1,0 +1,59 @@
+# Default values for spring-boot-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  name: ${{values.imageName}}
+  imagePullPolicy: IfNotPresent
+  tag: "latest"
+  
+namespace: ${{values.namespaceName}}-qa
+
+service:
+  portName: http
+  port: 8080
+  protocol: TCP
+  targetPort: http
+  type: ClusterIP
+
+deploymentName: ${{values.namespaceName}}
+
+appName: ${{values.namespaceName}}
+
+container:
+  portName: http
+  containerPort: 8080
+  protocol: TCP
+
+labels:
+  name:
+  releaseName: ${{values.namespaceName}}
+  
+serviceAccount:
+  # Specifies whether a Service Account should be created
+  create: false
+  # Annotations to add to the Service Account
+  annotations:
+   iam.gke.io/gcp-service-account=${{values.deployServiceAccount}}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "default"
+
+# Load Balancer for the App to be accessible over the internet.
+# Added this only for the Demo. Can be removed if not needed.
+
+  ingress:
+    useIngress: true
+    ingressClass: "gce"
+    annotations: |
+      kubernetes.io/ingress.class: "gce"
+      kubernetes.io/ingress.allow-http: "true"
+    hosts:
+      - http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: ${{values.namespaceName}}
+              servicePort: 8080

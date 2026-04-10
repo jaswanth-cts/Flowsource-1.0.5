@@ -1,0 +1,86 @@
+allconfigurations:
+  files:
+    - name: all-configurations.yaml
+      content: |-
+        apiVersion: backstage.io/v1alpha1
+        kind: Location
+        metadata:
+          name: all-configurations
+          description: A collection of all Backstage entities
+        spec:
+          targets:
+            - ./org.yaml
+            - ./systems.yaml
+            # - ./remote-templates.yaml
+    - name: remote-tenmplates.yaml
+      content: |-
+        ---
+        # apiVersion: backstage.io/v1alpha1
+        # kind: Location
+        # metadata:
+        #   name: templates-remote
+        #   description: A collection of remotely available templates
+        # spec:
+        #   type: url
+        #   targets:
+    - name: systems.yaml
+      content: |-
+        apiVersion: backstage.io/v1alpha1
+        kind: System
+        metadata:
+          name: examples
+        spec:
+          owner: guests
+    - name: org.yaml
+      content: |-
+        ---
+        # https://backstage.io/docs/features/software-catalog/descriptor-format#kind-group
+        apiVersion: backstage.io/v1alpha1
+        kind: Group
+        metadata:
+          name: guests
+        spec:
+          type: team
+          children: []
+
+        ---
+        apiVersion: backstage.io/v1alpha1
+        kind: Group
+        metadata:
+          name: sample-team
+          description: Group for Sample Team
+        spec:
+          type: team
+          profile:
+            # Intentional no displayName for testing
+            email: sample-temp-mail-id@example.com
+            # picture: https://avatars.dicebear.com/api/identicon/skygrade-team@example.com.svg?background=%23fff&margin=25
+          parent: backstage
+          children: []
+
+        ---
+        # This user is added as an example, to make it more easy for the "Guest"
+        # sign-in option to demonstrate some entities being owned. In a regular org,
+        # a guest user would probably not be registered like this.
+        apiVersion: backstage.io/v1alpha1
+        kind: User
+        metadata:
+          name: guest
+        spec:
+          profile:
+            displayName: Guest User
+            email: guest@example.com
+            # picture: https://avatars.dicebear.com/api/avataaars/guest@example.com.svg?background=%23fff
+          memberOf: [sample-team, guests]
+
+        ---
+        apiVersion: backstage.io/v1alpha1
+        kind: User
+        metadata:
+          name: John
+        spec:
+          profile:
+            # Intentional no displayName for testing
+            email: john@example.com
+            # picture: https://avatars.dicebear.com/api/avataaars/breanna-davison@example.com.svg?background=%23fff
+          memberOf: [sample-team]      

@@ -1,0 +1,1 @@
+export { CicdReleaseComponent } from './AzureReleaseComponent';

@@ -1,0 +1,761 @@
+app:
+  title: Cognizant Flowsource
+  baseUrl: ${FLOWSOURCE_BASE_URL}
+  # To include appropriate sign in page (For having logic in App.tsx)
+  signInAuthProvider: ${SIGN_IN_AUTH_PROVIDER} # For specific ProxiedSignInPage use "awsalb", "oauth2Proxy" and "gcp-iap". For SignInPage use any other value or undefined.
+  datadogRum:
+    clientToken: ${DATADOG_RUM_CLIENT_TOKEN}
+    applicationId: ${DATADOG_RUM_APPLICATION_ID}
+    site: ${DATADOG_RUM_SITE}
+    env: ${DATADOG_RUM_ENV}
+    sessionSampleRate: 100
+    sessionReplaySampleRate: 20
+
+organization:
+  name: " "
+
+permission:
+  enabled: true
+
+backend:
+  # Used for enabling authentication, secret is shared by all backend plugins
+  # See https://backstage.io/docs/auth/service-to-service-auth for
+  # information on the format
+  reading:
+    allow:
+      - host: '*.svc.cluster.local'
+  auth:
+    keys:
+      - secret: ${BACKEND_SECRET}
+    externalAccess:
+      - type: static
+        options:
+          token: ${ROLE_RESTAPI_APIKEY}
+          subject: roleMapping-access
+        accessRestrictions:
+          - plugin: flowsource-core
+  baseUrl: ${FLOWSOURCE_BASE_URL}
+  listen:
+    port: 7007
+    # Uncomment the following host directive to bind to specific interfaces
+    # host: 127.0.0.1
+  csp:
+    upgrade-insecure-requests: false
+    connect-src: ["'self'", 'http:', 'https:']
+    frame-src: ["'self'", '${DASHBOARD_DOMAIN}', '${JIRA_BOT_URL}']
+    # frame-src: 
+
+    # Content-Security-Policy directives follow the Helmet format: https://helmetjs.github.io/#reference
+    # Default Helmet Content-Security-Policy values can be removed by setting the key to false
+    img-src:
+    # "'self'" and 'data' are from the backstage default but must be set since img-src is overriden
+    - "'self'"
+    - 'data:'
+    - 'blob:'
+    # Allow your Jira instance for @roadiehq/backstage-plugin-jira
+    - ${JIRA_TARGET}
+  cors:
+    origin: ${FLOWSOURCE_BASE_URL}
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+
+  # config options: https://node-postgres.com/api/client
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_SERVICE_HOST}
+      port: ${POSTGRES_SERVICE_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+      # connection: ':memory:'
+      # https://node-postgres.com/features/ssl
+      # you can set the sslmode configuration option via the `PGSSLMODE` environment variable
+      # see https://www.postgresql.org/docs/current/libpq-ssl.html Table 33.1. SSL Mode Descriptions (e.g. require)
+      # ssl:
+      #   ca: # if you have a CA file and want to verify it you can uncomment this section
+      #     $file: <file-path>/ca/server.crt
+ 
+ # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
+
+integrations:
+  github:
+    - host: github.com
+      # This is a Personal Access Token or PAT from GitHub. You can find out how to generate this token, and more information
+      # about setting up the GitHub integration here: https://backstage.io/docs/getting-started/configuration#setting-up-a-github-integration
+      # Either use the below token or config under integration.github.apps: section for setting up the integrations with GitHub 
+      token: ${INTEGRATIONS_GITHUB_TOKEN}
+
+    ### Example for how to add your GitHub Enterprise instance using the API:
+    # - host: ghe.example.net
+    #   apiBaseUrl: https://ghe.example.net/api/v3
+    #   token: ${GHE_TOKEN}
+      # apps:
+      #   - appId: ${INTEGRATIONS_GITHUB_APP_APP_ID}
+      #     clientId: ${INTEGRATIONS_GITHUB_APP_CLIENT_ID}
+      #     clientSecret: ${INTEGRATIONS_GITHUB_APP_CLIENT_SECRET}
+      #     privateKey: ${INTEGRATIONS_GITHUB_APP_PRIVATE_KEY}
+      #     webhookSecret: ${INTEGRATIONS_GITHUB_APP_WEBHOOK_SECRET}
+
+  bitbucketCloud:
+    - host: bitbucket.org
+      token: ${BITBUCKET_TOKEN}
+      username: ${BITBUCKET_CLOUD_APP_USERNAME}
+      appPassword: ${BITBUCKET_CLOUD_APP_PASSWORD}
+      apiBaseUrl: https://api.bitbucket.org/2.0/repositories/
+
+  azure:
+    - host: dev.azure.com
+      credentials:
+        # Either use personalAccessToken or servicePrinciple credentials for setting up the integrations with Azure DevOps
+        # - organizations: 
+        #     - ${AZURE_DEVOPS_ORGANIZATION}
+        #   clientId: ${AZURE_SERVICE_PRINCIPLE_CLIENT_ID}
+        #   clientSecret: ${AZURE_SERVICE_PRINICIPLE_CLIENT_SECRET}
+        #   tenantId: ${AZURE_SERVICE_PRINCIPLE_TENANT_ID}
+        - organizations:
+            - ${AZURE_DEVOPS_ORGANIZATION}
+          personalAccessToken: ${AZURE_DEVOPS_TOKEN}
+
+  google:
+  - type: ${GOOGLE_TYPE}
+    project_id: ${GOOGLE_PROJECT_ID}
+    private_key_id: ${GOOGLE_PRIVATE_KEY_ID}
+    private_key: ${GOOGLE_PRIVATE_KEY}
+    client_email: ${GOOGLE_CLIENT_EMAIL}
+    client_id: ${GOOGLE_CLIENT_ID}
+    auth_uri: ${GOOGLE_AUTH_URI}
+    token_uri: ${GOOGLE_TOKEN_URI}
+    auth_provider_x509_cert_url: ${GOOGLE_AUTH_PROVIDER_X509_CERT_URL}
+    client_x509_cert_url: ${GOOGLE_CLIENT_X509_CERT_URL}
+    universe_domain: ${GOOGLE_UNIVERSE_DOMAIN}
+    gitToken: ${GIT_TOKEN}  
+    github: ${GITHUB_ENABLED}
+    triggerId: ${GIT_TRIGGER_ID}
+
+#proxy:
+  ### Example for how to add a proxy endpoint for the frontend.
+  ### A typical reason to do this is to handle HTTPS and CORS for internal services.
+  # endpoints:
+  #   '/test':
+  #     target: 'https://example.com'
+  #     changeOrigin: true
+
+# Reference documentation http://backstage.io/docs/features/techdocs/configuration
+# Note: After experimenting with basic setup, use CI/CD to generate docs
+# and an external cloud storage when deploying TechDocs for production use-case.
+# https://backstage.io/docs/features/techdocs/how-to-guides#how-to-migrate-from-techdocs-basic-to-recommended-deployment-approach
+techdocs:
+  builder: 'local' # Alternatives - 'external'
+  generator:
+    runIn: 'local' # Alternatives - 'docker'
+  publisher:
+    # techdocs.publisher.type can be - 'local' or 'googleGcs' or 'awsS3' or 'azureBlobStorage'.
+    # When set to 'local', techdocs-backend will create a 'static' directory at its root to store generated documentation files.
+    # When set to 'googleGcs', techdocs-backend will use a Google Cloud Storage Bucket to store generated documentation files.
+    # When set to 'awsS3', techdocs-backend will use an Amazon Web Service (AWS) S3 bucket to store generated documentation files.
+    type: ${TECHDOCS_STORAGE_PROVIDER_TYPE}
+    awsS3:
+      # (Required) AWS S3 Bucket Name
+      bucketName: ${S3_BUCKET_NAME}
+      # (Optional) Location in storage bucket to save files
+      # If not set, the default location will be the root of the storage bucket
+      bucketRootPath: '/'
+
+      # (Optional) AWS credentials to use to write to the storage bucket.
+      # This configuration section is now deprecated.
+      # Configuring the account ID is now preferred, with credentials in the 'aws' app config section.
+      # If credentials are not set and no account ID is set, environment variables or aws config file will be used to authenticate.
+      # https://www.npmjs.com/package/@aws-sdk/credential-provider-node
+      # https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html
+      credentials:
+        accessKeyId: ${S3_AWS_ACCESS_KEY}
+        secretAccessKey: ${S3_AWS_SECRET_KEY}
+
+      # (Optional) AWS Region of the bucket.
+      # If not set, AWS_REGION environment variable or aws config file will be used.
+      # https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-region.html
+      region: ${S3_AWS_REGION}
+    azureBlobStorage:
+      # (Required) Azure Blob Storage Container Name
+      containerName: ${TECHDOCS_STORAGE_CONTAINER_NAME}
+      # (Required) An account name is required to write to a storage blob container.
+      credentials:
+        accountName: ${TECHDOCS_AZURE_BLOB_STORAGE_ACCOUNT_NAME}
+        # (Optional) An account key is required to write to a storage container.
+        # If missing,AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET environment variable will be used.
+        # https://docs.microsoft.com/en-us/azure/storage/common/storage-auth?toc=/azure/storage/blobs/toc.json
+        accountKey: ${TECHDOCS_AZURE_BLOB_STORAGE_ACCOUNT_KEY}
+    googleGcs:
+      # (Required) Cloud Storage Bucket Name
+      bucketName: '${GOOGLE_BUCKET_NAME}'
+      # Location in storage bucket to save files
+      # (Optional) Location in storage bucket to save files
+      # If not set, the default location will be the root of the storage bucket
+      bucketRootPath: '/'
+      projectId: '${GOOGLE_PROJECT_ID}'
+      # (Optional) An Authentication is required to write to a storage bucket.
+      # GOOGLE_APPLICATION_CREDENTIALS environment variable will be used.
+      credentials: '${GOOGLE_APPLICATION_CREDENTIALS}'
+
+
+dora:
+  insights:
+    lastMonthsLimit: 4
+    cloudProvider: ${INSIGHTS_CLOUDPROVIDER}
+    aws:
+      database: ${INSIGHTS_REDSHIFT_DATABASE}
+      clusterIdentifier: ${INSIGHTS_REDSHIFT_CLUSTER_IDENTIFIER}
+      workgroupName: ${INSIGHTS_REDSHIFT_SERVERLESS_WORKGROUP_NAME}
+      secretArn: ${INSIGHTS_REDSHIFT_SERVERLESS_SECRET_ARN}
+      schema: ${INSIGHTS_REDSHIFT_SCHEMA}
+      dbUser: ${INSIGHTS_REDSHIFT_DB_USER}
+      region: ${INSIGHTS_REDSHIFT_REGION}
+      accessKeyId: ${INSIGHTS_REDSHIFT_AWS_ACCESS_KEY}
+      secretAccessKey: ${INSIGHTS_REDSHIFT_AWS_SECRET_KEY}
+    azure:
+      host: ${INSIGHTS_AZURE_DB_HOST}                    
+      port: ${INSIGHTS_AZURE_DB_PORT}                                                                                  
+      user: ${INSIGHTS_AZURE_DB_USER}                                                                                  
+      password: ${INSIGHTS_AZURE_DB_PASSWORD}                                                                       
+      database: ${INSIGHTS_AZURE_DB_DATABASE}
+      schema: ${INSIGHTS_AZURE_DB_SCHEMA}
+    gcp:
+      dataset_name: ${INSIGHTS_GCS_DATASET_NAME}
+      projectId: ${INSIGHTS_GCS_PROJECT_ID}
+      private_key: ${GOOGLE_PRIVATE_KEY}
+      client_email: ${GOOGLE_CLIENT_EMAIL}
+aws-fault-injection:
+  aws:
+    access_key_id: ${WELL_ARCHITECTED_AWS_ACCESS_KEY}
+    secret_access_key: ${WELL_ARCHITECTED_AWS_SECRET_KEY}
+
+resilience-hub:
+  aws:
+    access_key_id: ${WELL_ARCHITECTED_AWS_ACCESS_KEY}
+    secret_access_key: ${WELL_ARCHITECTED_AWS_SECRET_KEY}
+
+devops-guru:
+  statusFilter:
+    startTimeRange:
+      fromTime: ${DEVOPS_GURU_FILTER_FROM_TIME}
+  aws:
+    access_key_id: ${DEVOPS_GURU_AWS_ACCESS_KEY_ID}
+    secret_access_key: ${DEVOPS_GURU_AWS_SECRET_ACCESS_KEY}
+
+auth:
+  # see https://backstage.io/docs/auth/ to learn about auth providers
+  environment: development
+  session:
+    secret: ${AUTH_SESSION_SECRET}    
+  providers:
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+        githubOrganization: ${GITHUB_ORGANIZATION}
+    microsoft:
+      development:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        domainHint: ${AUTH_AZURE_TENANT_ID}
+#    cognito: #This needs to un-commented when key cloak would be used as an IDP
+#      development:
+#        metadataUrl: ${AUTH_AWS_COGNITO_METADATA_URL}
+#        tokenUrl: ${AUTH_AWS_COGNITO_TOKEN_URL}
+#        authorizationUrl: ${AUTH_AWS_COGNITO_AUTHORIZATION_URL}
+#        clientId: ${AUTH_AWS_COGNITO_CLIENT_ID}
+#        clientSecret: ${AUTH_AWS_COGNITO_CLIENT_SECRET}
+#        prompt: auto
+#    keycloak: #This needs to un commented when key cloak would be used as an IDP
+#      development:
+#        metadataUrl: ${KEYCLOAK_METADATA_URL}
+#        tokenUrl: ${KEYCLOAK_TOKEN_URL}
+#        authorizationUrl: ${KEYCLOAK_AUTHORIZATION_URL}
+#        clientId: ${KEYCLOAK_CLIENT_ID}
+#        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+#        prompt: auto
+    awsalb:
+      issuer: https://login.microsoftonline.com/${AUTH_AZURE_TENANT_ID}/v2.0
+      region: ${AWS_ALB_REGION}
+    oauth2Proxy:
+      development:
+        signIn:
+          resolvers:
+            - resolver: emailMatchingUserEntityProfileEmail
+            - resolver: emailLocalPartMatchingUserEntityName
+            - resolver: forwardedUserMatchingUserEntityName
+    gcp-iap:
+      audience: ${GCP_IAP_AUDIENCE}
+      signIn:
+        resolvers:
+          - resolver: emailMatchingUserEntityProfileEmail
+          - resolver: emailLocalPartMatchingUserEntityName
+          - resolver: emailMatchingUserEntityAnnotation
+  autologout:
+    enabled: true
+    idleTimeoutMinutes: ${AUTH_IDLE_TIMEOUTMINUTES}
+    promptBeforeIdleSeconds: ${AUTH_PROMPT_BEFORE_IDLESECONDS}
+    logoutIfDisconnected: true
+    useWorkerTimers: false
+           
+scaffolder:
+  # see https://backstage.io/docs/features/software-templates/configuration for software template options
+  actions:
+    aws:
+    - accessKeyId: ${CODEPIPELINE_ACCESS_KEY}
+      secretAccessKey: ${CODEPIPELINE_SECRET} 
+      roleArn: ${CODEPIPELINE_ROLE_ARN}
+      region: ${CODEPIPELINE_REGION}
+      masterPipeline: ${AWS_MASTER_PIPELINE}
+      githubConnectionArn: ${CODEPIPELINE_GITHUB_ORG_CONNECTION_ARN}
+      vpc: ${AWS_VPC_ID}
+      subnets: ${AWS_SUBNET_ID}
+      secGroup: ${AWS_SECURITY_GROUP_ID}
+      
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+  rules:
+    - allow: [Component, System, API, Resource, Location, Environment]
+  # See https://backstage.io/docs/features/software-catalog/#adding-components-to-the-catalog for more details
+  # on how to get entities into the catalog.
+  locations:
+    # Local example data, file locations are relative to the backend process, typically `packages/backend`
+    - type: file
+      target: ../../examples/entities.yaml
+
+    # Local example template
+    - type: file
+      target: ../../examples/template/template.yaml
+      rules:
+        - allow: [Template]
+
+    # Local example organizational data
+    - type: file
+      target: ../../examples/org.yaml
+      rules:
+        - allow: [User, Group]
+
+    ## Uncomment these lines to add more example data
+    # - type: url
+    #   target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/all.yaml
+
+    # # Uncomment these lines to add an example org
+    # - type: url
+    #   target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/acme-corp.yaml
+    #   rules:
+    #     - allow: [User, Group]
+
+    - type: file
+      target: /app/configurations/all-configurations.yaml
+      rules:
+        - allow: [User, Group, Environment]
+    # Remote template in a different repository
+    - type: url
+      target: https://github.com/TheCognizantFoundry/backstage-software-templates/blob/main/remote-template-demo.yaml
+      rules:
+        - allow: [Template]
+  providers:
+    azureDevOps:
+      azureDevOpsProject: # identifies your dataset / provider independent of config changes
+        organization: ${AZURE_DEVOPS_ORG}
+        project: ${AZURE_DEVOPS_PROJECT}
+        repository: ${AZURE_DEVOPS_REPOSITORY} # this will match all repos starting with service-*
+        path: /catalog-info.yaml
+        schedule: # optional; same options as in SchedulerServiceTaskScheduleDefinition
+          # supports cron, ISO duration, "human duration" as used in code
+          frequency: { minutes: 2 }
+          # supports ISO duration, "human duration" as used in code
+          timeout: { minutes: 3 }
+
+
+################################################<Added For Catalog Extended START>#########################################################
+catalogExtended:
+  scheduler:
+    refreshInterval:
+      hours: ${CATALOGEXTENDED_REFRESH_INTERVAL_HOURS}
+      minutes: ${CATALOGEXTENDED_REFRESH_INTERVAL_MINUTES}
+      seconds: ${CATALOGEXTENDED_REFRESH_INTERVAL_SECONDS}
+    timeout:
+      hours: ${CATALOGEXTENDED_TIMEOUT_HOURS}
+      minutes: ${CATALOGEXTENDED_TIMEOUT_MINUTES}
+      seconds: ${CATALOGEXTENDED_TIMEOUT_SECONDS}
+catalogInfo:
+  cloudProvider: ${CATALOG_INFO_CLOUD_PROVIDER}
+  azure:
+    storage_account_name: ${CATALOG_STORAGE_ACCOUNT_NAME}
+    blob_container_name: ${CATALOG_BLOB_CONTAINER_NAME}
+    blob_folder_name: ${CATALOG_BLOB_FOLDER_NAME}
+    azure_client_id:  ${CATALOG_AZURE_CLIENT_ID}
+    azure_tenant_id:  ${CATALOG_AZURE_TENANT_ID}
+    azure_secret_key:  ${CATALOG_AZURE_SECRET_KEY}  
+  awsS3:
+    access_key_id: ${CATALOG_S3_ACCESS_KEY_iD}
+    secret_access_key: ${CATALOG_S3_SECRET_ACCESS_KEY}
+    s3_region: ${CATALOG_S3_REGION}
+    s3_bucket_name: ${CATALOG_S3_BUCKET_NAME}
+    s3_upload_path: ${CATALOG_S3_UPLOAD_PATH}
+  googleGcs:
+    gcs_bucket_name: ${CATALOG_GCS_BUCKET_NAME}
+    gcs_upload_path: ${CATALOG_GCS_UPLOAD_PATH}
+    gcs_projectId: ${CATALOG_GCS_PROJECT_ID}
+    private_key: ${GOOGLE_PRIVATE_KEY}
+    client_email: ${GOOGLE_CLIENT_EMAIL}
+################################################<Added For Catalog Extended END>#########################################################
+##############################################<BEGIN Added For JIRA>#########################################################
+jiracustom:
+  jiraUserEmail: ${JIRA_USER_EMAIL}
+  jiraAccessKey: ${JIRA_ACCESS_KEY}
+  jiraBaseUrl: ${JIRA_BASE_URL}
+  jiraStoryPointsField: ${JIRA_STORY_POINTS_FIELD}
+  jiraAssignedToMeFilter: true  # By default, it will be true, if you want to disable it, set it to false
+  jiraBotUrl: ${JIRA_BOT_URL}
+  jiraBotEnabled: ${JIRA_BOT_ENABLED}
+###############################################< Added For JIRA END>#########################################################
+##############################################< Added For Sonarqube Start >#########################################################
+sonarqube:
+  baseUrl: ${SONARQUBE_URL}
+  projectUrl: ${SONARQUBE_PROJECT_URL}
+  apiKey: ${SONARQUBE_TOKEN}
+  version: ${SONARQUBE_VERSION}
+##############################################< Added For Sonarqube End >#########################################################
+##############################################<BEGIN Added For AzureDevOps>#########################################################
+azureDevOps:
+  baseUrl: ${AZURE_DEVOPS_BASEURL}
+  token: ${AZURE_DEVOPS_TOKEN}
+  organization: ${AZURE_DEVOPS_ORGANIZATION}
+  azureAssignedToMeFilter: true # By default, it will be true, if you want to disable it, set it to false
+###############################################< Added For AzureDevOps END>#########################################################
+##############################################<BEGIN Added For GitHub>#########################################################
+githubActions:
+  baseUrl: ${CICD_GITHUB_ACTIONS_BASEURL}
+###############################################< Added For GitHub END>#########################################################
+###############################################< Added For CHECKMARX START>#########################################################
+checkmarx:
+  clientId: ${CHECKMARX_CLIENT_ID}
+  clientSecret: ${CHECKMARX_CLIENT_SECRET}
+  username: ${CHECKMARX_USERNAME}
+  password: ${CHECKMARX_PASSWORD}
+  grantType: ${CHECKMARX_GRANT_TYPE}
+  baseUrl: ${CHECKMARX_BASE_URL}
+
+###############################################< Added For CHECKMARX END>#########################################################
+###############################################< Added For PRISMA CLOUD START ######################################################
+prisma-cloud:
+  api_host: ${PRISMA_API_URL}
+  access_key: ${PRISMA_ACCESS_ID}
+  secret_access_key: ${PRISMA_ACCESS_KEY}
+  twistlock_api_host: ${TWISTLOCK_API_HOST}
+  token_ttl: '5'
+  max_row_fetch: '500'
+  packageTypes:
+    - packageType:
+       name: OS
+       value: 46
+    - packageType:
+       name: JAR
+       value: 47
+    - packageType:
+       name: GEM
+       value: 48
+    - packageType:
+       name: NODEJS
+       value: 49
+    - packageType:
+       name: PYTHON
+       value: 410
+    - packageType:
+       name: BINARY
+       value: 411
+    - packageType:
+       name: CUSTOM
+       value: 412
+    - packageType:
+       name: NUGET
+       value: 415
+    - packageType:
+       name: Go
+       value: 412  
+
+###############################################< Added For PRISMA CLOUD END ########################################################
+###############################################< Added For CHATBOT START ######################################################
+chatbot:
+  url: ${CHATBOT_URL}
+  enabled: ${CHATBOT_ENABLED}
+  accessToken: ${CHATBOT_TOKEN}
+  scheduler:
+    refreshInterval:
+      hours: ${CHATBOT_REFRESH_INTERVAL_HOURS}
+      minutes: ${CHATBOT_REFRESH_INTERVAL_MINUTES}
+      seconds: ${CHATBOT_REFRESH_INTERVAL_SECONDS}
+    timeout:
+      hours: ${CHATBOT_TIMEOUT_HOURS}
+      minutes: ${CHATBOT_TIMEOUT_MINUTES}
+      seconds: ${CHATBOT_TIMEOUT_SECONDS}
+    initialDelay:
+      hours: ${CHATBOT_INITIAL_DELAY_HOURS}
+      minutes: ${CHATBOT_INITIAL_DELAY_MINUTES}
+      seconds: ${CHATBOT_INITIAL_DELAY_SECONDS}
+
+###############################################< Added For CHATBOT END ########################################################  
+###############################################< Added For JENKINS START>#######################################################
+jenkins:
+  baseUrl: ${JENKINS_BASE_URL}
+  username: ${JENKINS_USERNAME}
+  apiKey: ${JENKINS_API_KEY}
+  enableTrigger: false # By default, it will be false, if you want to enable it, set it to true
+
+###############################################< Added For JENKINS END>#########################################################
+###############################################< Added For DATADOG START ######################################################
+datadog:
+  api_key: ${DATADOG_API_KEY}
+  app_key: ${DATADOG_APP_KEY}
+  url: ${DATADOG_SITE}
+  max_row_fetch: 1000
+  api_version: v2
+  duration: 150
+###############################################< Added For DATADOG END ########################################################
+###############################################< Added For MORPHEUS START ######################################################
+morpheus:
+  morpheus_user: ${MORPHEUS_USERNAME}
+  morpheus_password: ${MORPHEUS_PASSWORD}
+  host_url: ${MORPHEUS_HOST_URL}
+  client_id: ${MORPHEUS_CLIENT_ID}
+  grant_type: ${GRANT_TYPE}
+  scope: ${SCOPE}
+  user_id: ${FLOWSOURCE_USER_ID}                                # till authenticated user available this value will be used.
+  rejectUnauthorized: ${MORPHEUS_REJ_UN_AUTH}                   # A flag to enable/disable TLS, while communicating with Morpheus Server over HTTPS.
+  order_submission_enabled: ${MORPHEUS_ORDER_SUBMISSION_ENABLED} #default value will be false
+  field_data_len: ${MORPHEUS_INPUT_FIELD_DATA_LEN}                # default will be 250 chars
+  environment:
+    enableServiceNowEnvMapping: ${SNOW_INFRA_PROVISION_ENV_MAPPING}
+###############################################< Added For MORPHEUS END ########################################################
+###############################################< Added For FINOPS CLOUDABILITY START ######################################################
+cloudability:
+  token: ${FINOPS_CLOUDABILITY_TOKEN}
+  baseUrl: https://api.cloudability.com/v3
+  projectUrl: ${FINOPS_CLOUDABILITY_REPORT_BASE_URL}
+###############################################< Added For FINOPS CLOUDABILITY END ########################################################
+###############################################< Added for custom actions for azure pipeline trigger START ################################
+customActions:
+  pipelineVariableGroup: ${AZURE_PIPELINE_VARIABLE_GROUP}
+  masterPipelineName: ${AZURE_MASTER_PIPELINE_NAME}
+###############################################< Added for custom actions for azure pipeline trigger END ################################
+###############################################< Added For DURATIONINDAYS START ########################################################
+flowsource:
+  dataPullDuration: '60'
+###############################################< Added For DURATIONINDAYS END ########################################################
+###############################################< Added For KUBERNETS START ###########################################################
+kubernetes:
+  serviceLocatorMethod:
+    type: "multiTenant"
+  clusterLocatorMethods:
+    - type: "config"
+      clusters:
+        - name: ${K8S_EKS_CLUSTER_NAME}
+          skipMetricsLookup: true
+          skipTLSVerify: true
+          url: ${K8S_EKS_CLUSTER_ENDPOINT}
+          authProvider: "aws"
+          caData: ${K8S_EKS_CA_DATA}
+          authMetadata:
+            kubernetes.io/x-k8s-aws-id: ${K8S_EKS_CLUSTER_NAME}
+        - url: ${AKS_CLUSTER_URL}
+          name: '${AKS_CLUSTER_NAME}'
+          skipMetricsLookup: true
+          skipTLSVerify: true
+          subscriptionId: '${AKS_SUBSCRIPTION_ID}'
+          resourceGroup: '${AKS_RESOURCE_GROUP}'
+          clusterName: '${AKS_CLUSTER_NAME}'
+          authProvider: 'serviceAccount'
+          caData: ${AKS_CA_DATA}
+          serviceAccountToken: ${AKS_SERVICE_ACCOUNT_TOKEN}
+    # - type: "gke"
+    #   url: ${K8S_GKE_CLUSTER_ENDPOINT}
+    #   name: ${K8S_GKE_CLUSTER_NAME}
+    #   projectId: '${GOOGLE_PROJECT_ID}'
+    #   region: ${K8S_GKE_REGION}
+    #   authProvider: 'googleServiceAccount'
+    #   caData: ${K8S_GKE_CLUSTER_CA}
+aws:
+  mainAccount:
+    accessKeyId: ${K8S_AWS_ACCESS_KEY_ID}
+    secretAccessKey: ${K8S_AWS_SECRET_ACCESS_KEY}
+  accounts: # Add any additional accounts here if needed
+    - accountId: ${K8S_AWS_ACCOUNT_ID}
+  awsCodePipeline:
+    accessKeyId: ${CODEPIPELINE_ACCESS_KEY}
+    secretAccessKey: ${CODEPIPELINE_SECRET} 
+    roleArn: ${CODEPIPELINE_ROLE_ARN}
+    region: ${CODEPIPELINE_REGION}
+    enableTrigger: false  # By default, it will be false, if you want to enable it, set it to true
+  accountDefaults:
+###############################################< Added For KUBERNETS END #############################################################
+##############################################< Added For DASHBOARDURL START ##########################################################
+dashboard:
+  baseUrl: ${DASHBOARD_EMBED_URL}
+###############################################< Added For DASHBOARDURL END ########################################################### 
+##############################################< Added For SERVICENOW START ########################################################
+serviceNow:
+  username: ${SERVICENOW_USERNAME}
+  password: ${SERVICENOW_PASSWORD}
+  instanceUrl: ${SERVICENOW_INSTANCE_URL}
+  environment:
+    orderTypeField: ${SERVICENOW_ORDER_FIELD}
+    serviceTypeValue: ${SERVICENOW_SERVICE_TYPE_VALUE}
+    orderTypeValue: ${SERVICENOW_ORDER_TYPE_VALUE}
+    provisionTypeValue: ${SERVICENOW_PROVISION_TYPE_VALUE}
+    agenticAIOpsLink: ${SERVICENOW_AGENTIC_AIOPS_DASHBOARD_URL}
+###############################################< Added For SERVICENOW END ########################################################
+##############################################< Added For VERACODE START ########################################################
+veracode:
+  apiId: ${VERACODE_API_ID}
+  apiKey: ${VERACODE_API_KEY}
+###############################################< Added For VERACODE END ########################################################
+
+###############################################< Added For DYNATRACE START ########################################################
+dynatrace:
+  clientId: ${DYNATRACE_CLIENTID}
+  clientSecret: ${DYNATRACE_CLIENTSECRET}
+  resource: ${DYNATRACE_RESOURCE}
+  environmentId: ${DYNATRACE_ENVIRONMENTID}
+  duration: 40
+###############################################< Added For DYNATRACE END ########################################################
+###############################################< Added For BITBUCKET START ########################################################
+bitbucket:
+  clientId: ${BITBUCKET_CLIENTID}
+  clientSecret: ${BITBUCKET_CLIENTSECRET}
+  apiBaseUrl: ${BITBUCKET_API_URL}
+  authorizationUrl: ${BITBUCKET_OAUTH_URL}
+###############################################< Added For BITBUCKET END ########################################################
+##############################################<Added For CCTP Integration START>#########################################################
+cctpProxy:
+    target: ${CCTP_TARGET_URL}
+    username: ${CCTP_USERNAME}
+    password: ${CCTP_PASSWORD}
+    staticMaxRobotCount: ${CCTP_STATIC_MAX_ROBOT_COUNT}
+    dynamicMaxRobotCount: ${CCTP_DYNAMIC_MAX_ROBOT_COUNT}
+##############################################<Added For CCTP Integration END>#########################################################
+##############################################<Added For AppDynamics Integration END>#########################################################
+appDynamics:
+  baseUrl: ${APPDYNAMICS_BASEURL}
+  clientId: ${APPDYNAMICS_CLIENTID}
+  clientSecret: ${APPDYNAMICS_CLIENTSECRET}
+  duration: 10
+##############################################<Added For AppDynamics Integration END>#########################################################
+##############################################<Added For Zephyr START>#########################################################
+zephyr:
+  baseUrl: ${ZEPHYR_BASE_URL}
+  accessToken: ${ZEPHYR_ACCESS_TOKEN}
+##############################################<Added For Zephyr END>#########################################################
+##############################################<Added For Playwright START>#########################################################
+playwright:
+  awsS3Bucket:
+    accessKeyId: ${PLAYWRIGHT_S3_ACCESS_KEY} 
+    secretAccessKey: ${PLAYWRIGHT_S3_SECRET_KEY} 
+    roleArn: ${PLAYWRIGHT_S3_ROLE_ARN}
+    region: ${PLAYWRIGHT_S3_REGION} 
+    bucketName: ${PLAYWRIGHT_S3_BUCKET_NAME}
+  azureStorage:
+    azureStorageAccountName: ${PLAYWRIGHT_AZURE_STORAGE_ACCOUNT_NAME}
+    azureContainerName: ${PLAYWRIGHT_AZURE_CONTAINER_NAME}
+    azure_client_id: ${PLAYWRIGHT_AZURE_CLIENT_ID}
+    azure_tenant_id: ${PLAYWRIGHT_AZURE_TENANT_ID}
+    azure_secret_key: ${PLAYWRIGHT_AZURE_SECRET_KEY}
+  gcsBucket:
+    type: ${GOOGLE_TYPE}
+    project_id: ${GOOGLE_PROJECT_ID}
+    private_key_id: ${GOOGLE_PRIVATE_KEY_ID}
+    private_key: ${GOOGLE_PRIVATE_KEY}
+    client_email: ${GOOGLE_CLIENT_EMAIL}
+    client_id: ${GOOGLE_CLIENT_ID}
+    auth_uri: ${GOOGLE_AUTH_URI}
+    token_uri: ${GOOGLE_TOKEN_URI}
+    auth_provider_x509_cert_url: ${GOOGLE_AUTH_PROVIDER_X509_CERT_URL}
+    client_x509_cert_url: ${GOOGLE_CLIENT_X509_CERT_URL}
+    universe_domain: ${GOOGLE_UNIVERSE_DOMAIN}
+    bucketName: ${PLAYWRIGHT_GCS_BUCKET_NAME}
+##############################################<Added For Playwright END>#########################################################
+##############################################<Added For Selenium START>#########################################################
+selenium:
+  awsS3Bucket:
+    accessKeyId: ${SELENIUM_S3_ACCESS_KEY} 
+    secretAccessKey: ${SELENIUM_S3_SECRET_KEY} 
+    roleArn: ${SELENIUM_S3_ROLE_ARN}
+    region: ${SELENIUM_S3_REGION}
+    bucketName: ${SELENIUM_S3_BUCKET_NAME}
+  azureStorage:
+    azureStorageAccountName: ${SELENIUM_AZURE_STORAGE_ACCOUNT_NAME}
+    azureContainerName: ${SELENIUM_AZURE_CONTAINER_NAME}
+    azure_client_id: ${SELENIUM_AZURE_CLIENT_ID}
+    azure_tenant_id: ${SELENIUM_AZURE_TENANT_ID}
+    azure_secret_key: ${SELENIUM_AZURE_SECRET_KEY}
+  gcsBucket:
+    type: ${GOOGLE_TYPE}
+    project_id: ${GOOGLE_PROJECT_ID}
+    private_key_id: ${GOOGLE_PRIVATE_KEY_ID}
+    private_key: ${GOOGLE_PRIVATE_KEY}
+    client_email: ${GOOGLE_CLIENT_EMAIL}
+    client_id: ${GOOGLE_CLIENT_ID}
+    auth_uri: ${GOOGLE_AUTH_URI}
+    token_uri: ${GOOGLE_TOKEN_URI}
+    auth_provider_x509_cert_url: ${GOOGLE_AUTH_PROVIDER_X509_CERT_URL}
+    client_x509_cert_url: ${GOOGLE_CLIENT_X509_CERT_URL}
+    universe_domain: ${GOOGLE_UNIVERSE_DOMAIN}
+    bucketName: ${SELENIUM_GCS_BUCKET_NAME}
+##############################################<Added For Selenium END>#########################################################
+
+##############################################<Added For Github PR Cycle Time Integration START>#########################################################
+githubPRCycleTime:
+  PRCycleTimeMin: 8       # PR Raised to Merged
+  PRCycleTimeMax: 9
+  PRReviewCycleTimeMin: 3  # PR Raised to Approved
+  PRReviewCycleTimeMax: 6
+  PRMergeCycleTimeMin: 0  # PR Approved to Merged
+  PRMergeCycleTimeMax: 1
+##############################################<Added For Github PR Cycle Time Integration END>#########################################################
+##############################################<Added wellArchitected Plugin Names START>#########################################################
+wellArchitectedPlugins:  
+  plugins: AWS Resilience Hub,AWS Fault Injection,Resilience4j,Datadog,Dynatrace,AppDynamics,SAST,Veracode Scan,Blackduck Scan,SCA,Infra Code Scan,Prisma Image Scan,Prisma Defender Host Scan,Prisma Defender Container Scan,DevopsGuru
+###############################################<Added wellArchitected Plugin Names END>#########################################################  
+pullRequestCycleTime:
+  PRCycleTimeMin: 10       # PR Raised to Merged
+  PRCycleTimeMax: 12
+  PRReviewCycleTimeMin: 4  # PR Raised to Approved
+  PRReviewCycleTimeMax: 7
+  PRMergeCycleTimeMin: 1   # PR Approved to Merged
+  PRMergeCycleTimeMax: 2
+  ##############################################<Added For Blackduck Integration END>#########################################################
+blackduck:
+  blackduckAuthToken: ${BLACKDUCK_TOKEN}
+  blackduckBaseUrl: ${BLACKDUCK_BASE_URL}
+  blackduckMaxRetries: 60  # Each retry waits 5 seconds, so 60 retries = 5 minutes timeout
+##############################################<Added For Blackduck Integration END>########################################################
+###############################################<Added for Flowsource Settings START>#########################################################   
+flowsourceSettings:
+  adminGroup: ${FLOWSOURCE_ADMIN_GROUP}  # Group name from catalog to be mapped as admin
+###############################################< Added For FEATURE FLAG START ########################################################
+unleash:
+  unleashBaseUrl: ${UNLEASH_BASE_URL} # Unleash base URL
+  unleashToken: ${UNLEASH_TOKEN} # Unleash API token
+###############################################< Added For FEATURE fLAG END ########################################################
+##############################################<Added For Azure Release Integration Start>########################################################
+azureRelease:
+  baseUrl: ${AZURE_RELEASE_BASE_URL}
+  hostUrl: ${AZURE_RELEASE_HOST_URL}
+  token: ${AZURE_RELEASE_TOKEN}
+##############################################<Added For Azure Release Integration End>########################################################
+##############################################<Added For PDLC >#########################################################
+pdlc:
+  cloudProvider: ${PDLC_CLOUDPROVIDER}
+  aws:
+    region: ${PDLC_AWS_REGION}
+    apiId: ${PDLC_AWS_APP_ID}
+    stage: ${PDLC_AWS_STAGE}
+  azure:
+    targetUrl: ${PDLC_AZURE_TARGET_URL}
+    clientID: ${PDLC_AZURE_CLIENT_ID}
+    apiKey: ${PDLC_AZURE_API_KEY}

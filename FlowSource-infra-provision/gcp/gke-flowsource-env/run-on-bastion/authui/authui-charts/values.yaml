@@ -1,0 +1,25 @@
+global:
+  replicaCount: 1
+  namespace: flowsource
+
+  authuiConfig:
+    AUTH_DOMAIN: "<IDENTITY_PROVIDER_AUTH_DOMAIN>"
+    DISPLAY_MODE: "optionFirst"
+    SELECT_TENANT_UI_TITLE: "Flowsource Auth UI"
+    LOGO: ""
+    STYLE_URL: ""
+    TENANTS_DISPLAY_NAME: "Flowsource Auth UI"
+    TENANTS_ICON_URL: "https://www.gstatic.com/firebasejs/ui/2.0.0/imagesauth/anonymous.png"
+    TENANTS_LOGO_URL: ""
+    TENANTS_BUTTON_COLOR: "#007bff"
+    TENANTS_IMMEDIATE_FEDERATED_REDIRECT: true
+    TENANTS_SIGN_IN_FLOW: "redirect"
+    TENANTS_SIGN_IN_OPTIONS_PROVIDER: "microsoft.com"
+
+  authui:
+    service:
+      type: ClusterIP
+      annotations: |
+        cloud.google.com/neg: '{"exposed_ports": {"80":{}}}'
+    secret:
+      gcpProjectId: "<GCP_Project_ID>"

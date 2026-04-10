@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authui-deployment
+  namespace: flowsource
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authui
+  template:
+    metadata:
+      labels:
+        app: authui
+    spec:
+      ## Use the Kubernetes Service Account Name which impersonates Service Account 3 mentioned in roles.md
+      {{ - if .Values.global.serviceAccount }}
+      serviceAccountName: {{ .Values.global.serviceAccount.name }}
+      {{ - end }}
+      containers:
+      - image: gcr.io/gcip-iap/authui
+        imagePullPolicy: Always
+        name: authui
+        env:
+        - name: DEBUG_CONSOLE
+          value: "true"
+        - name: UI_CONFIG
+          value: |
+            {
+              "$(API_KEY)": {
+                "authDomain": "{{ .Values.global.authuiConfig.AUTH_DOMAIN }}",
+                "displayMode": "{{ .Values.global.authuiConfig.DISPLAY_MODE }}",
+                "selectTenantUiTitle": "{{ .Values.global.authuiConfig.SELECT_TENANT_UI_TITLE }}",
+                "selectTenantUiLogo": "{{ .Values.global.authuiConfig.LOGO }}",
+                "styleUrl": "{{ .Values.global.authuiConfig.STYLE_URL }}",
+                "tenants": {
+                  "_": {
+                    "displayName": "{{ .Values.global.authuiConfig.TENANTS_DISPLAY_NAME }}",
+                    "iconUrl": "{{ .Values.global.authuiConfig.TENANTS_ICON_URL }}",
+                    "logoUrl": "{{ .Values.global.authuiConfig.TENANTS_LOGO_URL }}",
+                    "buttonColor": "{{ .Values.global.authuiConfig.TENANTS_BUTTON_COLOR }}",
+                    "immediateFederatedRedirect": {{ .Values.global.authuiConfig.TENANTS_IMMEDIATE_FEDERATED_REDIRECT }},
+                    "signInFlow": "{{ .Values.global.authuiConfig.TENANTS_SIGN_IN_FLOW }}",
+                    "signInOptions": [
+                      {
+                        "provider": "{{ .Values.global.authuiConfig.TENANTS_SIGN_IN_OPTIONS_PROVIDER }}",
+                        "customParameters": {
+                          "tenant": "$(TENANT_ID)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }          
+        envFrom:
+          - secretRef:
+              name: gcip-iap-authui-secret
+        volumeMounts:
+          - name: authui-secrets-volume
+            mountPath: /mnt/authui-secrets-store
+            readOnly: true
+        ports:
+        - containerPort: 8080
+      volumes:
+          - name: authui-secrets-volume
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: authui-secrets-provider
+                name: authui-secrets

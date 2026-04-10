@@ -1,0 +1,1 @@
+export { PrismaCloudComponent } from './PrismaCloudComponent';

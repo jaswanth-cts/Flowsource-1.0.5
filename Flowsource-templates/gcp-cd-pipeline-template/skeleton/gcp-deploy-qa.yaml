@@ -1,0 +1,65 @@
+serviceAccount: $SERVICE_ACCOUNT_EMAIL
+logsBucket: gs://${{values.bucketName}}
+
+steps:
+  # Get credentials for the GKE Cluster
+  - id: 'Get credentials for the GKE Cluster'
+    name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - container
+      - clusters
+      - get-credentials
+      - ${{values.clusterName}}
+      - --region=${{values.regionName}}
+
+  # Create namespace for app deployment
+  - id: 'Create namespace for app deployment'
+    name: 'gcr.io/cloud-builders/kubectl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if kubectl get namespaces ${{values.namespaceName}}-qa; then
+          echo Namespace found '${{values.namespaceName}}-qa'
+        else
+         echo Creating a new namespace called '${{values.namespaceName}}-qa'
+        cat <<EOF | kubectl create -f -
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${{values.namespaceName}}-qa
+        EOF
+        fi
+
+  # Deploy application with Terraform/helm on GKE nodes
+  - id: 'Deploy application with Terraform/helm on GKE nodes'
+    name: 'hashicorp/terraform:light'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd ./environments/qa
+        terraform init
+        terraform fmt -check
+        terraform validate
+        terraform plan -out=tfplan
+        terraform apply -auto-approve tfplan
+  
+  # Annotate the Service Account for app deployment
+  - id: 'Annotate the Service Account for app deployment'
+    name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo annotate the service account 
+        kubectl annotate serviceaccount default --namespace ${{values.namespaceName}}-qa iam.gke.io/gcp-service-account=${{values.deployServiceAccount}}
+        
+options:
+  workerPool:
+    'projects/${{values.projectId}}/locations/${{values.regionName}}/workerPools/${{values.workerPoolName}}'
+
+timeout: '1200s'  # Set timeout to 20 minutes
+
+substitutions:
+  _PROJECT_ID: ${{values.projectId}}

@@ -1,0 +1,8 @@
+project_id = "xjhgddkjhjkddldljdh"
+region = "us-east1"
+cluster_name = "test-gke-cluster"
+chart = "../../../FlowSourceCharts"
+values-files = ["../../../FlowSourceCharts/flowsource-values.yaml", "../../../FlowSourceCharts/app-config.yaml", "../../../FlowSourceCharts/all-configurations.yaml"]
+namespace = "flowsource"
+deploymentname = "flowsourcedeploy"
+clustertype = "gke"

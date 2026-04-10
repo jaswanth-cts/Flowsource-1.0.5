@@ -1,0 +1,1 @@
+export { AppDynamicsComponent } from '../AppDynamicsComponent';

@@ -1,0 +1,257 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: aws-cd-pipeline-template-using-github
+  title: AWS CD pipeline using Github
+  description: Create a AWS CD Pipeline using Github for a project
+  tags:
+  - cd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - regionName
+    - default_branch
+    - appName
+    - imageName
+    - namespaceName
+    - clusterName
+    - bucketName
+    - dynamodbTableName
+    - vpc
+    - bastion_id
+    - eks_subnet_1
+    - eks_subnet_2
+    - min_count
+    - max_count
+    - code_build_arn
+    - role_arn
+    - clusterIamRoleArn
+    - nodeIamRoleArn
+    - clusterVersion
+    - clusterSecurityGroupId
+    - amiReleaseVersion
+    - amiType
+    - createIamRole
+    - clusterEndpointPublicAccess
+    - clusterEndpointPrivateAccess
+    - createClusterLaunchTemplate
+    - useCustomLaunchTemplate
+    - useLatestAmiReleaseVersion
+    - instanceType
+    properties:
+      regionName:
+        title: AWS Region
+        type: string
+        description: AWS region in which repository should be created. eg (us-east-1)
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Branch name for the repository. eg('main' or 'master')
+      appName:
+        title: App Name
+        type: string
+        description: Provide the app name for Helm chart
+        maxLength: 53
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      imageName:
+        title: Image Name
+        type: string
+        description: Provide the name of image from Elastic Container Registry
+      namespaceName:
+        title: Namespace Name
+        type: string
+        description: Provide the namespace name
+      clusterName:
+        title: Cluster Name
+        type: string
+        description: Provide the EKS Cluster name
+      bucketName:
+        title: Bucket Name
+        type: string
+        description: Provide the name of existing AWS S3 Bucket
+      dynamodbTableName:
+        title: DynamoDB Table Name
+        type: string
+        description: Provide the name of existing DynamoDB Table
+      min_count:
+        title: Min Count
+        type: number
+        description: The minimum number of nodes for the Node Pool
+      max_count:
+        title: Max Count
+        type: number
+        description: The maximum number of nodes for the Node Pool
+      vpc:
+        title: VPC
+        type: string
+        description: The VPC for the Cluster
+      eks_subnet_1:
+        title: EKS Subnet 1
+        type: string
+        description: The subnet for the Cluster
+      eks_subnet_2:
+        title: EKS Subnet 2
+        type: string
+        description: The subnet for the Cluster
+      bastion_id:
+        title: Bastion Security Group ID
+        type: string
+        description: The Security Group Id of Bastion host
+      bastion_ci_dr:
+        title: Bastion CI DR
+        type: string
+        description: The CIDR block for the Bastion
+      code_build_arn:
+        title: Code Build ARN
+        type: string
+        description: The Code Build ARN for the Cloud Build Project
+      role_arn:
+        title: EKS Role ARN
+        type: string
+        description: The role ARN for the Cluster
+      clusterIamRoleArn:
+        title: Cluster IAM Role ARN
+        type: string
+        description: The IAM role ARN for the Cluster
+      nodeIamRoleArn:
+        title: Node IAM Role ARN
+        type: string
+        description: The IAM role ARN for the Node Pool
+      clusterVersion:
+        title: Cluster Version
+        type: string
+        description: The version of the EKS Cluster
+      clusterSecurityGroupId:
+        title: Cluster Security Group Id
+        type: string
+        description: The Security Group Id for the Cluster
+      amiReleaseVersion:
+        title: AMI Release Version
+        type: string
+        description: The AMI release version for the Cluster
+      amiType:
+        title: AMI Type
+        type: string
+        description: The AMI type for the Cluster
+      createIamRole:
+        title: Create IAM Role
+        type: boolean
+        ui:widget: radio
+        default: false
+        description: Create IAM Role for the Cluster
+      clusterEndpointPublicAccess:
+        title: Cluster Endpoint Public Access
+        type: boolean
+        ui:widget: radio
+        default: false
+        description: Enable public access to the Cluster endpoint
+      clusterEndpointPrivateAccess:
+        title: Cluster Endpoint Private Access
+        type: boolean
+        ui:widget: radio
+        default: true
+        description: Enable private access to the Cluster endpoint
+      createClusterLaunchTemplate:
+        title: Create Cluster Launch Template
+        type: boolean
+        ui:widget: radio
+        default: false
+        description: Create Launch Template for the Cluster
+      useCustomLaunchTemplate:
+        title: Use Custom Launch Template
+        type: boolean
+        ui:widget: radio
+        default: false
+        description: Use custom Launch Template for the Cluster
+      useLatestAmiReleaseVersion:
+        title: Use Latest AMI Release Version
+        type: boolean
+        ui:widget: radio
+        default: false
+        description: Use latest AMI release version for the Cluster
+      instanceType:
+        title: Instance Type
+        type: string
+        default: t3.medium
+        description: The instance type for the Cluster
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+
+  - title: Choose a location
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        regionName: ${{ parameters.regionName }}
+        default_branch: ${{ parameters.default_branch }}
+        imageName: ${{parameters.imageName}}
+        namespaceName: ${{parameters.namespaceName}}
+        appName: ${{parameters.appName}}
+        clusterName: ${{parameters.clusterName}}
+        bucketName: ${{parameters.bucketName}}
+        dynamodbTableName: ${{parameters.dynamodbTableName}}
+        vpc: ${{parameters.vpc}}
+        eks_subnet_1: ${{parameters.eks_subnet_1}}
+        eks_subnet_2: ${{parameters.eks_subnet_2}}
+        bastion_id: ${{parameters.bastion_id}}
+        bastion_ci_dr: ${{parameters.bastion_ci_dr}}
+        role_arn: ${{parameters.role_arn}}
+        code_build_arn: ${{parameters.code_build_arn}}
+        min_count: ${{ parameters.min_count }}
+        max_count: ${{ parameters.max_count }}
+        clusterIamRoleArn: ${{ parameters.clusterIamRoleArn }}
+        nodeIamRoleArn: ${{ parameters.nodeIamRoleArn }}
+        clusterVersion: ${{ parameters.clusterVersion }}
+        clusterSecurityGroupId: ${{ parameters.clusterSecurityGroupId }}
+        amiReleaseVersion: ${{ parameters.amiReleaseVersion }}
+        amiType: ${{ parameters.amiType }}
+        createIamRole: ${{ parameters.createIamRole }}
+        clusterEndpointPublicAccess: ${{ parameters.clusterEndpointPublicAccess }}
+        clusterEndpointPrivateAccess: ${{ parameters.clusterEndpointPrivateAccess }}
+        createClusterLaunchTemplate: ${{ parameters.createClusterLaunchTemplate }}
+        useCustomLaunchTemplate: ${{ parameters.useCustomLaunchTemplate }}
+        useLatestAmiReleaseVersion: ${{ parameters.useLatestAmiReleaseVersion }}
+        instanceType: ${{ parameters.instanceType }}
+        http_port: 8080
+
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.component_id }}
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.default_branch }}
+      protectDefaultBranch: false
+
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

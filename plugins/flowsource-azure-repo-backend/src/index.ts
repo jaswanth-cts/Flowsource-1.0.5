@@ -1,0 +1,1 @@
+export { flowsourceAzureRepoBackendPlugin as default } from './plugin'

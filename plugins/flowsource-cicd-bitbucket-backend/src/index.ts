@@ -1,0 +1,1 @@
+export { flowsourceCicdBitBucketBackendPlugin as default } from './plugin'

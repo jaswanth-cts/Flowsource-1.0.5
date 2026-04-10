@@ -1,0 +1,182 @@
+AmazonBedrockAgentsMultiAgentsPolicy
+=================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeAgent",
+                "bedrock:GetAgentAlias"
+            ],
+            "Resource": "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:agent-alias/*/*"
+        }
+    ]
+}
+==================================
+policy-bedrock-service-pdlc-useast1
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:GetGuardrail",
+                "bedrock:ListDataSources",
+                "bedrock:ListPrompts",
+                "bedrock:ListFlowVersions",
+                "bedrock:CreateGuardrailVersion",
+                "bedrock:ListIngestionJobs",
+                "bedrock:ListFlowAliases",
+                "bedrock:ApplyGuardrail",
+                "bedrock:ListGuardrails",
+                "bedrock:ListAgentVersions",
+                "bedrock:ListAgentActionGroups",
+                "bedrock:UpdateGuardrail",
+                "bedrock:ListAgentKnowledgeBases",
+                "bedrock:Retrieve",
+                "bedrock:ListAgentAliases",
+                "bedrock:DeleteGuardrail"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:prompt/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:guardrail/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:knowledge-base/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:agent/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:flow/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:ApplyGuardrail",
+                "bedrock:ListGuardrails",
+                "bedrock:GetGuardrail",
+                "bedrock:InvokeModel",
+                "bedrock:UpdateGuardrail",
+                "bedrock:InvokeModelWithResponseStream",
+                "bedrock:CreateGuardrailVersion",
+                "bedrock:DeleteGuardrail"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:guardrail/*",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/amazon.titan-embed-text-v1",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/cohere.embed-english-v3",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/cohere.embed-multilingual-v3",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/amazon.titan-embed-text-v2:0",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/anthropic.claude-v2:1",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/anthropic.claude-3-opus-20240229-v1:0",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:DeleteAgent",
+                "bedrock:InvokeAgent",
+                "bedrock:GetPrompt",
+                "bedrock:GetAgent",
+                "bedrock:GetCustomModel",
+                "bedrock:GetProvisionedModelThroughput",
+                "bedrock:Retrieve"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:inference-profile/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:prompt/*:*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:knowledge-base/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:provisioned-model/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:agent/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:imported-model/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:application-inference-profile/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:agent-alias/*/*",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:custom-model/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Decrypt",
+                "lambda:ListVersionsByFunction",
+                "lambda:GetLayerVersion",
+                "bedrock:GetPrompt",
+                "lambda:InvokeAsync",
+                "lambda:GetFunctionConfiguration",
+                "s3:ListBucket",
+                "lambda:GetLayerVersionPolicy",
+                "aoss:APIAccessAll",
+                "lambda:ListProvisionedConcurrencyConfigs",
+                "lambda:GetProvisionedConcurrencyConfig",
+                "lambda:ListTags",
+                "lambda:GetRuntimeManagementConfig",
+                "lambda:GetAlias",
+                "lambda:InvokeFunctionUrl",
+                "lambda:GetEventSourceMapping",
+                "lambda:InvokeFunction",
+                "lambda:GetFunction",
+                "lambda:GetFunctionRecursionConfig",
+                "lambda:ListAliases",
+                "lambda:GetFunctionUrlConfig",
+                "lambda:ListFunctionUrlConfigs",
+                "lambda:GetFunctionCodeSigningConfig",
+                "s3:PutObject",
+                "s3:GetObject",
+                "lambda:ListFunctionEventInvokeConfigs",
+                "lambda:ListFunctionsByCodeSigningConfig",
+                "lambda:GetFunctionConcurrency",
+                "lambda:GetFunctionEventInvokeConfig",
+                "kms:GenerateDataKey",
+                "lambda:GetCodeSigningConfig",
+                "lambda:GetPolicy"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:prompt/*",
+                "arn:aws:aoss:<AWS_REGION>:<ACCOUNT_ID>:collection/*",
+                "arn:aws:lambda:<AWS_REGION>:<ACCOUNT_ID>:function:*",
+                "arn:aws:lambda:<AWS_REGION>:<ACCOUNT_ID>:function:mk-aitest-gatherevidence",
+                "arn:aws:kms:<AWS_REGION>:<ACCOUNT_ID>:key/*",
+                "arn:aws:s3:::pdlc-terraform",
+                "arn:aws:s3:::pdlc-terraform/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor4",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:GetAccountSettings",
+                "bedrock:ListModelInvocationJobs",
+                "bedrock:AssociateThirdPartyKnowledgeBase",
+                "bedrock:ListKnowledgeBases",
+                "bedrock:ListModelCustomizationJobs",
+                "bedrock:ListAgents",
+                "bedrock:RetrieveAndGenerate",
+                "bedrock:ListModelCopyJobs",
+                "bedrock:ListImportedModels",
+                "bedrock:ListCustomModels",
+                "lambda:ListLayerVersions",
+                "lambda:ListLayers",
+                "lambda:ListCodeSigningConfigs",
+                "bedrock:InvokeBuilder",
+                "lambda:ListFunctions",
+                "bedrock:CreateAgent",
+                "bedrock:ListFoundationModelAgreementOffers",
+                "bedrock:ListModelEvaluationJobs",
+                "bedrock:ListEvaluationJobs",
+                "bedrock:ListModelImportJobs",
+                "bedrock:ListFlows",
+                "bedrock:ListInferenceProfiles",
+                "bedrock:CreateGuardrail",
+                "lambda:ListEventSourceMappings",
+                "bedrock:ListProvisionedModelThroughputs",
+                "bedrock:ListFoundationModels"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+=========================================================

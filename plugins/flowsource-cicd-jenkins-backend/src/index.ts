@@ -1,0 +1,1 @@
+export { flowsourceCicdJenkinsBackendPlugin as default } from './plugin'

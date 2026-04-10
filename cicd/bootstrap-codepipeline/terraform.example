@@ -1,0 +1,85 @@
+# ============================================================
+# FlowSource CI/CD Bootstrap - Example terraform.tfvars
+# Copy this file to terraform.tfvars and fill in your values.
+# NEVER commit terraform.tfvars to source control.
+# ============================================================
+
+# AWS Region
+aws_region = "us-east-1"
+
+# Project prefix — used to name all created AWS resources
+project_name = "flowsource"
+
+# EKS cluster name (must match what is in the infra terraform.tfvars)
+eks_cluster_name = "flowsource-cluster"
+
+# ECR repository for FlowSource Docker images
+ecr_repo_name   = "flowsource"
+create_ecr_repo = true   # set false if repo already exists
+
+# -------------------------------------------------------
+# Terraform Remote State
+# -------------------------------------------------------
+# S3 bucket that stores terraform.tfstate AND pipeline artifacts.
+# The same bucket is used by all pipeline stages.
+tf_state_bucket   = "flowsource-tf-state-<account-id>"
+tf_dynamodb_table = "flowsource-tf-locks"
+
+# -------------------------------------------------------
+# Source Control
+# -------------------------------------------------------
+# Use "GitHub" or "CodeCommit"
+source_provider = "GitHub"
+
+# GitHub settings (ignored when source_provider = "CodeCommit")
+github_owner          = "your-github-org"
+repository_name       = "FlowSource105"
+branch_name           = "main"
+github_connection_arn = "arn:aws:codestar-connections:us-east-1:<account-id>:connection/<connection-id>"
+
+# CodeCommit settings (ignored when source_provider = "GitHub")
+# repository_name = "FlowSource105"
+# branch_name    = "main"
+
+# -------------------------------------------------------
+# IAM Roles (must be pre-created - see PREREQUISITES doc)
+# -------------------------------------------------------
+codebuild_service_role_arn    = "arn:aws:iam::<account-id>:role/FlowSourceCodeBuildRole"
+codepipeline_service_role_arn = "arn:aws:iam::<account-id>:role/FlowSourceCodePipelineRole"
+
+# -------------------------------------------------------
+# VPC (required for private EKS cluster access)
+# -------------------------------------------------------
+use_vpc = true
+vpc_id  = "vpc-xxxxxxxxxxxxxxxxx"
+
+# Private subnets — must have NAT gateway outbound access for internet (ECR, S3, etc.)
+private_subnet_ids = ["subnet-xxxxxxxxxxxxxxxxx", "subnet-yyyyyyyyyyyyyyyyy"]
+
+# Security group for CodeBuild — allow outbound internet + EKS API access
+codebuild_security_group_ids = ["sg-xxxxxxxxxxxxxxxxx"]
+
+# -------------------------------------------------------
+# Approval / Notifications
+# -------------------------------------------------------
+# SNS topic ARN for manual approval emails (leave "" to disable email)
+approval_sns_topic_arn = "arn:aws:sns:us-east-1:<account-id>:flowsource-approvals"
+
+# Public-facing (or ALB) URL of DEV and QA environments for the approval email
+flowsource_dev_url = "http://<dev-alb-dns-name>"
+flowsource_qa_url  = "http://<qa-alb-dns-name>"
+
+# -------------------------------------------------------
+# Build Settings
+# -------------------------------------------------------
+build_timeout_minutes = 60
+
+# -------------------------------------------------------
+# Tags
+# -------------------------------------------------------
+tags = {
+  Project     = "FlowSource"
+  ManagedBy   = "Terraform"
+  Environment = "cicd"
+  Owner       = "DevOps"
+}

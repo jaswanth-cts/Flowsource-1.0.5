@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: '${{values.artifact_id}}'
+    jackson.serialization.indent_output: true
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    version: openapi_3_1
+  version: '@springdoc.version@'
+  swagger-ui:
+    use-root-path: true
+otel:
+  traces:
+    exporter: otlp
+  metrics:
+    exporter: otlp
+  logs:
+    exporter: otlp
+  exporter:
+    otlp:
+      endpoint: http://localhost:4318
+
+management.endpoints.web.exposure.include: '*'
+management.endpoint.health.show-details: always
+management.otlp.metrics.export.url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
+
+management.health.diskspace.enabled: false
+management.health.circuitbreakers.enabled: true
+management.health.ratelimiters.enabled: false
+management.metrics.tags.application: ${spring.application.name}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true
+management.metrics.distribution.percentiles-histogram.resilience4j.circuitbreaker.calls: true
+management.metrics.distribution.percentiles-histogram.resilience4j.bulkhead.calls: true
+management.metrics.distribution.percentiles-histogram.resilience4j.ratelimiter.calls: true
+
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      registerHealthIndicator: true
+      slidingWindowSize: 10
+      minimumNumberOfCalls: 6
+      permittedNumberOfCallsInHalfOpenState: 5
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      waitDurationInOpenState: 120s
+      failureRateThreshold: 75
+      eventConsumerBufferSize: 10
+      recordFailurePredicate: ${{values.java_package_name}}.exception.RecordFailurePredicate
+  instances:
+    helloService:
+      baseConfig: default
+
+resilience4j.retry:
+  instances:
+    helloService:
+      maxAttempts: 3
+      waitDuration: 5s
+      enableExponentialBackoff: true
+      exponentialBackoffMultiplier: 2
+      retryExceptions:
+        - org.springframework.web.client.HttpServerErrorException
+        - java.io.IOException
+      ignoreExceptions:
+        - ${{values.java_package_name}}.exception.BusinessException
+
+resilience4j.bulkhead:
+  instances:
+    helloService:
+      maxConcurrentCalls: 10
+    slowService:
+      maxConcurrentCalls: 2
+      maxWaitDuration: 0
+
+resilience4j.ratelimiter:
+  instances:
+    helloService:
+      timeoutDuration: 10s
+      limitRefreshPeriod: 1m
+      limitForPeriod: 10
+      registerHealthIndicator: false

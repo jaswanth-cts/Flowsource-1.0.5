@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ${{values.appName}}
+description: A Helm Chart for ${{values.appName}} in Kubernets
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

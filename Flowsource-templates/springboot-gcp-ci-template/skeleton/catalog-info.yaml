@@ -1,0 +1,49 @@
+
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{values.component_id | dump}}
+  {%- if values.description %}
+  description: ${{values.description | dump}}
+  {%- endif %}
+  annotations:
+    github.com/project-slug: ${{values.destination.owner + "/" + values.destination.repo}}
+    backstage.io/techdocs-ref: dir:.
+    # Add the following annotation to the component to enable the GCP CI/CD plugin
+    flowsource/gcp-pipelines: ${{values.triggerName}}
+    flowsource/gcp-region: ${{values.gcp_location}}
+    flowsource/durationInDays: '60'
+    # Add the following annotation to the component to enable the Code Quality plugin
+    flowsource/sonarqube-project-key: ${{values.sonar_project_key}} 
+    # Add the following annotation to the component to enable the Github PR plugin 
+    flowsource/github-repo-owner: ${{values.destination.owner}}
+    flowsource/github-repo-name: ${{values.repo_name}}
+    # Add the following annotation to the component to enable the Checkmarx plugin
+    flowsource/checkmarx-project-id: ${{values.checkmarx_project_name}}
+    # Add the following annotation to the component to enable the Blackduck plugin
+    flowsource/blackduck-project-id: ${{values.blackduck_project_name}}
+    # Kubernetes plugin
+    'backstage.io/kubernetes-namespace': ${{values.namespace}}
+    'backstage.io/kubernetes-label-selector': 'app=${{values.appName}}'
+spec:
+  providesApis:
+    - ${{values.component_id}}-api
+  type: service
+  lifecycle: experimental
+  owner: ${{values.owner | dump}}
+
+# ---
+# apiVersion: backstage.io/v1alpha1
+# kind: API
+# metadata:
+#   name: ${{values.component_id}}-api
+#   description: Get ${{values.component_id}} details
+#   tags:
+#     - java
+#     - springboot
+# spec:
+#   type: openapi
+#   lifecycle: production
+#   owner: ${{values.owner | dump}}
+#   definition: 
+#     $text: http://${{values.appName}}.${{values.namespace}}.svc.cluster.local/v3/api-docs

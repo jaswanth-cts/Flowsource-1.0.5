@@ -1,0 +1,99 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: gcp-master-pipeline-template
+  title: GCP Master Pipeline
+  description: Create a GCP master pipeline repository
+  tags:
+  - gcp-cicd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - gcp_service_Account
+    - gcp_logs_Bucket
+    - gcp_project_id
+    - gcp_location
+    - gcp_workerPool
+    - defaultBranch
+    properties:
+      gcp_service_Account:
+        title: Service Account
+        type: string
+        description: Service Account
+      gcp_logs_Bucket:
+        title: GCP Logs Bucket
+        type: string
+        description: Name of the GCP logs bucket. eg (gs://bucketname)
+      gcp_project_id:
+        title: GCP Project ID
+        type: string
+        description: GCP Project ID
+      gcp_location:
+        title: GCP Location
+        type: string
+        description: Name of the GCP location. eg (us-east1)
+      gcp_workerPool:
+        title: GCP Worker Pool
+        type: string
+        description: Name of the GCP Worker Pool.
+      defaultBranch:
+        title: Default Branch
+        type: string
+        description: Default branch for the repository
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+  - title: Choose a location
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      copyWithoutRender:
+      - .github/workflows/*
+      values:
+        github_repo_name: ${{ parameters.repoUrl | parseRepoUrl }}
+        defaultBranch: ${{ parameters.defaultBranch }}
+        gcp_service_Account: ${{ parameters.gcp_service_Account }}
+        gcp_logs_Bucket: ${{ parameters.gcp_logs_Bucket }}
+        gcp_project_id: ${{ parameters.gcp_project_id }}
+        gcp_location: ${{ parameters.gcp_location }}
+        gcp_workerPool: ${{ parameters.gcp_workerPool }}
+
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is gcp master pipeline repository.
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.defaultBranch }}
+
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

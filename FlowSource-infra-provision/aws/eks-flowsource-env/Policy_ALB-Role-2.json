@@ -1,0 +1,61 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "elasticloadbalancing:CreateLoadBalancer",
+            "Resource": [
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:loadbalancer/app/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:loadbalancer/net/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:targetgroup/*/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:CreateLoadBalancer",
+                "elasticloadbalancing:AddTags",
+                "elasticloadbalancing:CreateTargetGroup",
+                "elasticloadbalancing:DeleteTargetGroup",
+                "elasticloadbalancing:CreateRule",
+                "elasticloadbalancing:DeleteRule"
+            ],
+            "Resource": [
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:targetgroup/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:listener-rule/net/*/*/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:loadbalancer/app/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:listener/app/*/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:listener/net/*/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:loadbalancer/net/*/*"
+            ]
+        },
+		{
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:CreateListener",
+                "elasticloadbalancing:DeleteListener",
+                "elasticloadbalancing:ModifyListener",
+                "elasticloadbalancing:CreateRule",
+                "elasticloadbalancing:DeleteRule",
+                "elasticloadbalancing:ModifyRule"
+            ],
+            "Resource": [
+                "arn:aws:elasticloadbalancing:us-east-1:1111:loadbalancer/*",
+                "arn:aws:elasticloadbalancing:us-east-1:1111:listener/*",
+                "arn:aws:elasticloadbalancing:us-east-1:1111:listener-rule/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": "elasticloadbalancing:CreateTargetGroup",
+            "Resource": [
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:loadbalancer/app/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:loadbalancer/net/*/*",
+                "arn:aws:elasticloadbalancing:us-east-1:111111111111:targetgroup/*/*"
+            ]
+        }
+    ]
+}

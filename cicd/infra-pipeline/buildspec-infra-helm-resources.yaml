@@ -1,0 +1,123 @@
+version: 0.2
+
+# ============================================================
+# FlowSource - Infrastructure Pipeline (Stage 2)
+# Installs Helm charts on EKS (only if not already present):
+#   - AWS Secrets Store CSI Driver      (kube-system / csi-secrets-store)
+#   - AWS Secrets Store CSI Provider    (kube-system / secrets-provider-aws)
+#   - AWS Load Balancer Controller      (kube-system / aws-load-balancer-controller)
+# References: FlowSource-infra-provision/aws/eks-flowsource-resources-helm/
+# NOTE: This buildspec MUST run inside the VPC (private subnets)
+#       because the EKS cluster endpoint is private.
+# ============================================================
+
+env:
+  variables:
+    TERRAFORM_VERSION: "1.14.8"
+    HELM_RESOURCES_DIR: "FlowSource-infra-provision/aws/eks-flowsource-resources-helm"
+    TF_STATE_BUCKET: ""           # Populated via pipeline environment variable
+    TF_STATE_KEY: "infra/eks-helm-resources/terraform.tfstate"
+    TF_STATE_REGION: ""           # Populated via pipeline environment variable
+    AWS_REGION: ""                # Populated via pipeline environment variable
+    CLUSTER_NAME: ""              # Populated via pipeline environment variable
+
+phases:
+  install:
+    commands:
+      - echo "=== Installing Terraform ${TERRAFORM_VERSION} ==="
+      - curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      - unzip -q terraform.zip && mv terraform /usr/local/bin/ && rm terraform.zip
+      - terraform --version
+      - echo "=== Installing Helm ==="
+      - curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      - helm version
+      - echo "=== Installing kubectl ==="
+      - curl -sLo kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      - chmod +x kubectl && mv kubectl /usr/local/bin/
+      - kubectl version --client
+
+  pre_build:
+    commands:
+      - echo "=== Configuring kubeconfig for EKS cluster ${CLUSTER_NAME} ==="
+      - aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
+
+      - echo "=== Configuring Terraform S3 backend ==="
+      - |
+        cat > ${CODEBUILD_SRC_DIR}/${HELM_RESOURCES_DIR}/backend-override.tf <<EOF
+        terraform {
+          backend "s3" {
+            bucket  = "${TF_STATE_BUCKET}"
+            key     = "${TF_STATE_KEY}"
+            region  = "${TF_STATE_REGION}"
+            encrypt = true
+          }
+        }
+        EOF
+
+      - echo "=== Initializing Terraform ==="
+      - cd ${CODEBUILD_SRC_DIR}/${HELM_RESOURCES_DIR}
+      - rm -rf .terraform .terraform.lock.hcl
+      - terraform init -reconfigure
+
+      - echo "=== Importing existing Helm releases into Terraform state (skip if not found) ==="
+      - |
+        cd ${CODEBUILD_SRC_DIR}/${HELM_RESOURCES_DIR}
+
+        TF_VARS="-var=region=${AWS_REGION} -var=cluster-name=${CLUSTER_NAME}"
+
+        helm status csi-secrets-store -n kube-system > /dev/null 2>&1 && {
+          echo "[IMPORT] csi-secrets-store found — importing into Terraform state"
+          terraform import ${TF_VARS} module.helm-secrets-store-csi-driver.helm_release.deployment kube-system/csi-secrets-store || true
+        } || echo "[SKIP]   csi-secrets-store not found — will install"
+
+        helm status secrets-provider-aws -n kube-system > /dev/null 2>&1 && {
+          echo "[IMPORT] secrets-provider-aws found — importing into Terraform state"
+          terraform import ${TF_VARS} module.secrets-store-csi-driver-provider-aws.helm_release.deployment kube-system/secrets-provider-aws || true
+        } || echo "[SKIP]   secrets-provider-aws not found — will install"
+
+        helm status aws-load-balancer-controller -n kube-system > /dev/null 2>&1 && {
+          echo "[PATCH]  Patching ALB controller resources with Helm ownership labels/annotations"
+          HELM_LABELS="app.kubernetes.io/managed-by=Helm"
+          HELM_ANNOTS="meta.helm.sh/release-name=aws-load-balancer-controller meta.helm.sh/release-namespace=kube-system"
+
+          # ServiceAccount is namespace-scoped — must specify -n kube-system
+          kubectl label   serviceaccount aws-load-balancer-controller -n kube-system ${HELM_LABELS} --overwrite || true
+          kubectl annotate serviceaccount aws-load-balancer-controller -n kube-system ${HELM_ANNOTS} --overwrite || true
+
+          # ClusterRole / ClusterRoleBinding are cluster-scoped — no namespace flag
+          for NAME in aws-load-balancer-controller aws-load-balancer-controller-role; do
+            kubectl get clusterrole ${NAME} > /dev/null 2>&1 && \
+              kubectl label   clusterrole ${NAME} ${HELM_LABELS} --overwrite && \
+              kubectl annotate clusterrole ${NAME} ${HELM_ANNOTS} --overwrite || true
+            kubectl get clusterrolebinding ${NAME} > /dev/null 2>&1 && \
+              kubectl label   clusterrolebinding ${NAME} ${HELM_LABELS} --overwrite && \
+              kubectl annotate clusterrolebinding ${NAME} ${HELM_ANNOTS} --overwrite || true
+          done
+
+          echo "[IMPORT] aws-load-balancer-controller found — importing into Terraform state"
+          terraform import ${TF_VARS} module.aws_load_balancer_controller.helm_release.deployment kube-system/aws-load-balancer-controller || true
+        } || echo "[SKIP]   aws-load-balancer-controller not found — will install"
+
+  build:
+    commands:
+      - echo "=== Running Terraform Plan for Helm Resources ==="
+      - cd ${CODEBUILD_SRC_DIR}/${HELM_RESOURCES_DIR}
+      - |
+        terraform plan \
+          -var="region=${AWS_REGION}" \
+          -var="cluster-name=${CLUSTER_NAME}" \
+          -out=tfplan-helm-resources.out
+      - echo "Plan completed."
+
+  post_build:
+    commands:
+      - echo "=== Applying Terraform — installing or reconciling Helm charts ==="
+      - cd ${CODEBUILD_SRC_DIR}/${HELM_RESOURCES_DIR}
+      - terraform apply -auto-approve tfplan-helm-resources.out
+      - echo "=== Verifying deployments ==="
+      - kubectl get pods -n kube-system | grep -E "csi|secrets|alb" || true
+      - echo "=== EKS Helm Resources stage complete ==="
+
+artifacts:
+  files:
+    - "**/*"

@@ -1,0 +1,194 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-pdlc-azure-constainer-app-template
+  title: Create PDLC Azure Container App Template
+  description: Create PDLC Azure Container App Template
+  tags:
+    - pdlc
+    - azure
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+    - title: Provide some information to create PDLC Azure Container App component
+      required:
+        - name
+        - owner
+      properties:
+        name: 
+          title: Component Name
+          type: string
+          description: PDLC component
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds:
+            - Group
+    - title: Infra specific information
+      required:
+        - subscriptionId
+        - resourceGroupName
+        - resourceGroupLocation
+        - vnetName
+        - subnetName
+        - userManagedIdentity
+        - appName
+        - workloadProfileType
+        - workloadProfileMinimumCount
+        - workloadProfileMaximumCount
+        - containerRegistry
+        - azurePdlcAssistantContainerImage
+        - jiraMcpContainerImage
+        - githubMcpContainerImage
+      properties:
+        subscriptionId:
+          title: Subscription ID
+          type: string
+          description: Azure Subscription ID
+        resourceGroupName:
+          title: Resource Group Name
+          type: string
+          description: Azure Resource Group Name
+        resourceGroupLocation:
+          title: Resource Group Location
+          type: string
+          description: Azure Resource Group Location
+        vnetName:
+          title: VNet Name
+          type: string
+          description: Azure VNet Name
+        subnetName:
+          title: Subnet Name
+          type: string
+          description: Azure Subnet Name
+        userManagedIdentity:
+          title: User Managed Identity
+          type: string
+          description: Azure User Managed Identity Name
+        appName:
+          title: App Name
+          type: string
+          description: Azure Container App Name
+        workloadProfileType:
+          title: Workload Profile Type
+          type: string
+          description: Azure Container App Workload Profile Type
+        workloadProfileMinimumCount:
+          title: Workload Profile Minimum Count
+          type: number
+          description: Azure Container App Workload Profile Minimum Count
+        workloadProfileMaximumCount:
+          title: Workload Profile Maximum Count
+          type: number
+          description: Azure Container App Workload Profile Maximum Count
+        containerRegistry:
+          title: Container Registry
+          type: string
+          description: Azure Container Registry URL
+        azurePdlcAssistantContainerImage:
+          title: Azure PDLC Assistant Container Image
+          type: string
+          description: Azure PDLC Assistant container image name with tag (e.g., azurepdlc-assistant:latest)
+        jiraMcpContainerImage:
+          title: JIRA MCP Container Image
+          type: string
+          description: JIRA MCP container image name with tag (e.g., jiramcp:latest)
+        githubMcpContainerImage:
+          title: GitHub MCP Container Image
+          type: string
+          description: GitHub MCP container image name with tag (e.g., githubmcp:latest)      
+        
+    - title: Choose a location
+      required:
+        - repoUrl 
+        - branch
+        # -----------------Uncomment the below lines for the case where repository already exists---------------
+        # - title
+        # - description
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com        
+        branch:
+          title: Branch
+          type: string
+          default: main
+          description: Git branch to use (default is "main")
+        # -----------------Uncomment the below lines for the case where repository already exists---------------
+        # -----------------This will add title and description to the pull request-----------------
+        # title:
+        #   title: Title
+        #   type: string
+        #   description: Title of the pull request
+        # description:
+        #   title: Description
+        #   type: string
+        #   description: Description of the pull request
+
+  steps:
+    - id: template
+      name: Fetch Skeleton + Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          owner: ${{ parameters.owner }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+          subscriptionId: ${{ parameters.subscriptionId }}
+          resourceGroupName: ${{ parameters.resourceGroupName }}
+          resourceGroupLocation: ${{ parameters.resourceGroupLocation }}
+          vnetName: ${{ parameters.vnetName }}
+          subnetName: ${{ parameters.subnetName }}
+          userManagedIdentity: ${{ parameters.userManagedIdentity }}
+          appName: ${{ parameters.appName }}
+          workloadProfileType: ${{ parameters.workloadProfileType }}
+          workloadProfileMinimumCount: ${{ parameters.workloadProfileMinimumCount }}
+          workloadProfileMaximumCount: ${{ parameters.workloadProfileMaximumCount }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+          azurePdlcAssistantContainerImage: ${{ parameters.azurePdlcAssistantContainerImage }}
+          jiraMcpContainerImage: ${{ parameters.jiraMcpContainerImage }}
+          githubMcpContainerImage: ${{ parameters.githubMcpContainerImage }}
+          
+    # -----------------Comment the below lines for the case where repository already exists---------------
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        allowedHosts: ["github.com"]
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: ${{ parameters.branch }}
+    # -----------------Uncomment the below lines for the case where repository already exists---------------
+    # - id: publish
+    #   name: Publish
+    #   action: publish:github:pull-request
+    #   input:
+    #     allowedHosts: ["github.com"]
+    #     repoUrl: ${{ parameters.repoUrl }}
+    #     branchName: ${{ parameters.branch }}
+    #     title: ${{ parameters.title }}
+    #     description: ${{ parameters.description }}
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        # -----------------Comment the below lines for the case where repository already exists---------------
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        # -----------------Uncomment the below line for the case where repository already exists---------------
+        # repoContentsUrl: https://${{ (parameters.repoUrl | parseRepoUrl).host }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}/blob/${{ parameters.branch }}
+        catalogInfoPath: "/catalog-info.yaml"
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{values.name | dump}}
+  {%- if values.description %}
+  description: ${{values.description | dump}}
+  {%- endif %}
+  annotations:
+    github.com/project-slug: ${{values.destination.project + "/" + values.destination.repo}}
+    backstage.io/techdocs-ref: dir:.
+    flowsource/azure-pipelines: ${{values.destination.repo + "-ci-pipeline"}}
+    flowsource/azure-repo-name: ${{values.destination.repo}}
+    flowsource/azure-project-name: ${{values.destination.project}}
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:guest

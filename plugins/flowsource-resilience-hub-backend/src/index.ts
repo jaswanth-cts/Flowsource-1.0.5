@@ -1,0 +1,1 @@
+export { flowsourceResilienceHubBackendPlugin as default } from './plugin'

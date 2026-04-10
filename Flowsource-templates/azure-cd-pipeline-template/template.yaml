@@ -1,0 +1,174 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: azure-cd-pipeline-template
+  title: Azure CD pipeline
+  description: Create a Azure CD Pipeline for a project
+  tags:
+  - cd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - appName
+    - imageName
+    - namespaceName
+    - clusterName
+    - resourceGroupName
+    - storageAccountName
+    - devContainerName
+    - qaContainerName
+    - prodContainerName
+    - vnet
+    - aks_subnet
+    - user_managed_identity_cp
+    - user_managed_identity_kubelet
+
+    properties:
+      appName:
+        title: App Name
+        type: string
+        description: Provide the app name for Helm chart
+        ui:field: ValidationField
+        ui:options:
+          regex: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+          errorMessage: Must start and end with a letter or number, and can contain letters, numbers, hyphens, and dots in between.Maximum length is 50 characters.
+      imageName:
+        title: Image Name
+        type: string
+        description: Provide the name of image from Azure Container Registry
+      namespaceName:
+        title: Namespace Name
+        type: string
+        description: Provide the namespace name
+      clusterName:
+        title: Cluster Name
+        type: string
+        description: Provide the AKS Cluster name
+      resourceGroupName:
+        title: Resource Group Name
+        type: string
+        description: Provide the name of existing Azure Resource Group
+      storageAccountName:
+        title: Storage Account Name
+        type: string
+        description: Provide the name of existing Azure Storage Account used for storing the Terraform state
+      devContainerName:
+        title: Dev Container Name
+        type: string
+        description: Provide the name of existing container within the Azure Storage Account for storing the Terraform state for the dev environment
+      qaContainerName:
+        title: QA Container Name
+        type: string
+        description: Provide the name of existing container within the Azure Storage Account for storing the Terraform state for the qa environment
+      prodContainerName:
+        title: Prod Container Name
+        type: string
+        description: Provide the name of existing container within the Azure Storage Account for storing the Terraform state for the prod environment
+      node_vm_size:
+        title: Node VM Size
+        type: string
+        description: The type of VM for the Node Pool
+      min_count:
+        title: Min Count
+        type: number
+        description: The minimum number of nodes for the Node Pool
+      max_count:
+        title: Max Count
+        type: number
+        description: The maximum number of nodes for the Node Pool
+      vnet:
+        title: Vnet
+        type: string
+        description: The VNET for the Cluster
+      aks_subnet:
+        title: AKS Subnet
+        type: string
+        description: The subnet for the Cluster
+      agic_enable_flag:
+        title: Agic Enable Flag
+        type: boolean
+        description: Set to false if agic ingress controller should not be setup
+        default: false
+      user_managed_identity_cp:
+        title: User Managed Identity cp
+        type: string
+        description: The name for the user managed identity for control plane.
+      user_managed_identity_kubelet:
+        title: User Managed Identity Kubelet
+        type: string
+        description: The name for the user managed identity for kubelet.
+      resourceGroupLocation:
+        title: Resource Group Location
+        type: string
+        description: Provide the name of existing Azure Resource Location
+      clusterVersion:
+        title: Cluster Version
+        type: string
+        description: Provide the AKS Cluster Version
+      node_vm_type:
+        title: Node VM Type
+        type: string
+        description: The type of VM for the Node Pool
+
+  - title: Choose a location
+
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - dev.azure.com
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        imageName: ${{parameters.imageName}}
+        namespaceName: ${{parameters.namespaceName}}
+        appName: ${{parameters.appName}}
+        clusterName: ${{parameters.clusterName}}
+        resourceGroupName: ${{parameters.resourceGroupName}}
+        storageAccountName: ${{parameters.storageAccountName}}
+        devContainerName: ${{parameters.devContainerName}}
+        qaContainerName: ${{parameters.qaContainerName}}
+        prodContainerName: ${{parameters.prodContainerName}}
+        node_vm_size: ${{ parameters.node_vm_size }}
+        min_count: ${{ parameters.min_count }}
+        max_count: ${{ parameters.max_count }}
+        vnet: ${{ parameters.vnet }}
+        aks_subnet: ${{ parameters.aks_subnet }}
+        agic_enable_flag: ${{ parameters.agic_enable_flag }}
+        user_managed_identity_cp: ${{ parameters.user_managed_identity_cp }}
+        user_managed_identity_kubelet: ${{ parameters.user_managed_identity_kubelet }}
+        resourceGroupLocation: ${{parameters.resourceGroupLocation}}
+        clusterVersion: ${{parameters.clusterVersion}}
+        node_vm_type: ${{ parameters.node_vm_type }}
+        http_port: 8080
+
+  - id: publish
+
+    name: Publish
+    action: publish:azure
+    input:
+      allowedHosts: ["dev.azure.com"]
+      description: This is ${{ parameters.name }}
+      repoUrl: ${{ parameters.repoUrl }}
+
+  output:
+    links:
+    - title: Repository
+      url: https://dev.azure.com/${{ (parameters.repoUrl | parseRepoUrl).organization }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/_git/${{ (parameters.repoUrl | parseRepoUrl).repo }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

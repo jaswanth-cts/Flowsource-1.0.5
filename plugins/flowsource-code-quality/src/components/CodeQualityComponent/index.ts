@@ -1,0 +1,1 @@
+export { CodeQualityComponent } from './CodeQualityComponent';

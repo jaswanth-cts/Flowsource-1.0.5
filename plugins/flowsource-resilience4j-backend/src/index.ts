@@ -1,0 +1,1 @@
+export { flowsourceResilience4jBackendPlugin as default } from './plugin'

@@ -1,0 +1,203 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "AssumeRole",
+			"Effect": "Allow",
+			"Action": "sts:AssumeRole",
+			"Resource": "arn:aws:iam::${AWS::AccountId}:role/codebuild-service-role"
+		},
+		{
+			"Sid": "EKS",
+			"Effect": "Allow",
+			"Action": [
+				"eks:Describe*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "ECR",
+			"Effect": "Allow",
+			"Action": [
+				"ecr:GetAuthorizationToken",
+				"ecr:BatchCheckLayerAvailability",
+				"ecr:BatchGetImage",
+				"ecr:GetDownloadUrlForLayer",
+				"ecr:DescribeRepositories",
+				"ecr:ListImages",
+				"ecr:DescribeImages",
+				"ecr:DescribeImageScanFindings",
+				"ecr:GetRepositoryPolicy",
+				"ecr:GetLifecyclePolicy",
+				"ecr:GetLifecyclePolicyPreview",
+				"ecr:ListTagsForResource",
+				"ecr:PutImage",
+				"ecr:InitiateLayerUpload",
+				"ecr:UploadLayerPart",
+				"ecr:CompleteLayerUpload",
+				"ecr:PutLifecyclePolicy",
+				"ecr-public:*"
+			],
+			"Resource": "arn:aws:ecr:us-east-1:${AWS::AccountId}:repository/demo-aws-ecr"
+		},
+		{
+			"Sid": "ECRAuthorizationToken",
+			"Effect": "Allow",
+			"Action": "ecr:GetAuthorizationToken",
+			"Resource": "*"
+		},
+		{
+			"Sid": "CloudWatch",
+			"Effect": "Allow",
+			"Action": [
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:PutLogEvents"
+			],
+			"Resource": [
+				"arn:aws:logs:us-east-1:${AWS::AccountId}:log-group:aws/codebuild/*",
+				"arn:aws:logs:us-east-1:${AWS::AccountId}:log-group:/aws/codebuild/*:log-stream:*"
+			]
+		},
+		{
+			"Sid": "SecretsManager",
+			"Effect": "Allow",
+			"Action": [
+				"secretsmanager:GetSecretValue",
+				"secretsmanager:DescribeSecret"
+			],
+			"Resource": "arn:aws:secretsmanager:us-east-1:${AWS::AccountId}:secret:*"
+		},
+		{
+			"Sid": "CodeBuild",
+			"Effect": "Allow",
+			"Action": [
+				"codebuild:CreateReportGroup",
+				"codebuild:CreateReport",
+				"codebuild:DeleteReportGroup",
+				"codebuild:UpdateReportGroup",
+				"codebuild:BatchGetReportGroups",
+				"codebuild:ListReportGroups",
+				"codebuild:BatchGetReports",
+				"codebuild:DeleteReport",
+				"codebuild:UpdateReport",
+				"codebuild:ListReports",
+				"codebuild:ListReportsForReportGroup",
+				"codebuild:CreateProject",
+				"codebuild:BatchGetProjects",
+				"codebuild:DeleteProject",
+				"codebuild:ListProjects",
+				"codebuild:UpdateProject",
+				"codebuild:StartBuild",
+				"codebuild:BatchGetBuilds",
+				"codebuild:ListBuilds",
+				"codebuild:StopBuild",
+				"iam:PassRole"
+			],
+			"Resource": "arn:aws:codebuild:us-east-1:${AWS::AccountId}:project/*"
+		},
+		{
+			"Sid": "CodePipeline",
+			"Effect": "Allow",
+			"Action": [
+				"codepipeline:CreatePipeline",
+				"codepipeline:ListPipelines",
+				"codepipeline:GetPipeline",
+				"codepipeline:UpdatePipeline",
+				"codepipeline:DeletePipeline",
+				"codepipeline:ListTagsForResource"
+			],
+			"Resource": "arn:aws:codepipeline:us-east-1:${AWS::AccountId}:*"
+		},
+		{
+			"Sid": "S3CloudBuild",
+			"Effect": "Allow",
+			"Action": [
+				"s3:PutObject",
+				"s3:GetObject",
+				"s3:ListBucket"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "Terraform",
+			"Effect": "Allow",
+			"Action": [
+				"eks:*",
+				"ec2:DescribeInstances",
+				"ec2:DescribeNetworkInterfaces",
+				"ec2:DescribeRouteTables",
+				"ec2:DescribeSecurityGroups",
+				"ec2:DescribeSubnets",
+				"ec2:DescribeVpcs",
+				"ec2:CreateSecurityGroup",
+				"ec2:AuthorizeSecurityGroupIngress",
+				"ec2:RevokeSecurityGroupIngress",
+				"ec2:AuthorizeSecurityGroupEgress",
+				"ec2:RevokeSecurityGroupEgress",
+				"ec2:DeleteSecurityGroup",
+				"elasticloadbalancing:*",
+				"iam:CreateRole",
+				"iam:PutRolePolicy",
+				"iam:AttachRolePolicy",
+				"iam:DetachRolePolicy",
+				"iam:DeleteRolePolicy",
+				"iam:DeleteRole",
+				"autoscaling:*",
+				"cloudwatch:*",
+				"logs:*",
+				"ssm:*",
+				"ec2:DeleteNetworkInterface",
+				"ec2:CreateNetworkInterface",
+				"ec2:CreateNetworkInterfacePermission",
+				"ec2:DescribeDhcpOptions"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "DynamoDB",
+			"Effect": "Allow",
+			"Action": [
+				"dynamodb:GetItem",
+				"dynamodb:PutItem",
+				"dynamodb:DeleteItem"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "IAMCreatePolicy",
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreatePolicy",
+				"iam:TagPolicy"
+			],
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"ec2:CreateNetworkInterfacePermission",
+				"ec2:DescribeDhcpOptions",
+				"ec2:DescribeNetworkInterfaces",
+				"ec2:DeleteNetworkInterface",
+				"ec2:DescribeSubnets",
+				"ec2:DescribeSecurityGroups",
+				"ec2:DescribeVpcs"
+			],
+			"Resource": "arn:aws:ec2:us-east-1:${AWS::AccountId}:network-interface/*",
+			"Condition": {
+				"StringEquals": {
+					"ec2:AuthorizedService": "codebuild.amazonaws.com"
+				},
+				"ArnEquals": {
+					"ec2:Subnet": [
+						"arn:aws:ec2:us-east-1:${AWS::AccountId}:subnet/subnet-046b20ce41dbdd427",
+						"arn:aws:ec2:us-east-1:${AWS::AccountId}:subnet/subnet-004d6ab500ba9634c",
+						"arn:aws:ec2:us-east-1:${AWS::AccountId}:subnet/subnet-0445fdb7cf2294dbe",
+						"arn:aws:ec2:us-east-1:${AWS::AccountId}:subnet/subnet-0984629ab6f1058d3"
+					]
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,1 @@
+export { DoraMetricsComponent } from './DoraMetricsComponent';

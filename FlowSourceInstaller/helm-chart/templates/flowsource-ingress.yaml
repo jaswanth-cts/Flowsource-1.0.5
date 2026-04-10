@@ -1,0 +1,31 @@
+
+{{- if .Values.flowsource.ingress.useIngress }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flowsource-ingress
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: flowsource
+  {{- if .Values.flowsource.ingress.annotations }}
+  annotations:
+    {{- .Values.flowsource.ingress.annotations | nindent 4 }}
+  {{- end }}  
+spec:
+  {{- if not (eq .Values.flowsource.ingress.ingressClass nil) }}
+  ingressClassName: {{ .Values.flowsource.ingress.ingressClass }}
+  {{- end }}
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: flowsource
+                port: 
+                  number: 7007
+      {{- if .Values.flowsource.ingress.host }}
+      host: {{ .Values.flowsource.ingress.host }}
+      {{- end }}
+{{- end }}

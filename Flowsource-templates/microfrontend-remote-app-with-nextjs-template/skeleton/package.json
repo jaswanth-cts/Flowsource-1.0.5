@@ -1,0 +1,41 @@
+{
+  "name":  "${{values.name}}",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "NEXT_PRIVATE_LOCAL_WEBPACK=true next dev -p 3001",
+    "winDev": "set NEXT_PRIVATE_LOCAL_WEBPACK=true && next dev -p 3001",
+    "build": "next build",
+    "serve": "npx serve@latest out -p 3001",
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@module-federation/nextjs-mf": "^8.8.24",
+    "bootstrap": "^5.3.3",
+    "cross-env": "^7.0.3",
+    "next": "14.3.0-canary.87",
+    "react": "^18",
+    "react-dom": "^18",
+    "webpack": "5.97.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.8",
+    "postcss": "^8",
+    "typescript": "^5",
+    "@types/jest": "29.5.11",
+    "@testing-library/jest-dom": "6.1.5",
+    "@testing-library/react": "14.1.2",
+    "jest": "29.7.0",
+    "jest-environment-jsdom": "29.7.0",
+    "react-router-dom": "^6.26.2"
+  },
+  "resolutions": {
+    "cross-spawn": "7.0.6",
+    "ajv": "8.18.0"
+  }
+}

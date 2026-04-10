@@ -1,0 +1,41 @@
+trigger:
+  branches:
+    include:
+    - master
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+- group: ci-pipeline-variable-group # Reference the variable group here
+- name: tag
+  value: 'latest'
+- name: imageRepository
+  value: '${{values.name}}'
+- name: dockerfile
+  value: '$(Build.SourcesDirectory)/Dockerfile'
+- name: dockerpassword
+  value: $[variables.DOCKER_PASSWORD]
+
+stages:
+- stage: Build
+  jobs:
+  - job: DockerBuild
+    displayName: 'Build and package'
+    steps:
+    - bash: |
+        set -e
+        echo "****** Docker build and Push *************"
+        echo "Docker Registry is $DOCKER_REGISTRY"
+        echo "Docker User is $DOCKER_USERNAME"
+        echo "Docker Repository is $(imageRepository)"
+        echo "Tag is $(tag)"
+        docker build -t $DOCKER_REGISTRY/$(imageRepository):$(tag) .
+        echo "Docker Build Successful"
+
+        docker login $DOCKER_REGISTRY -u="$DOCKER_USERNAME" -p=$Docker_Passwd
+        docker push $DOCKER_REGISTRY/$(imageRepository):$(tag)
+        docker logout $DOCKER_REGISTRY
+      displayName: Build and push an image to container registry
+      condition: succeeded()
+      env:
+        Docker_Passwd: $(dockerpassword)

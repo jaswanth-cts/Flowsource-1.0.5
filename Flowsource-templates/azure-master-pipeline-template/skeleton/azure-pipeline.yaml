@@ -1,0 +1,51 @@
+trigger: none
+pool:
+  vmImage: 'ubuntu-latest'
+  jdkVersion: "1.17"
+
+parameters:
+- name: org_service_url
+  type: string
+  default: 'https://dev.azure.com/${{values.organization}}'
+- name: devops_project_id
+  type: string
+  default: '${{values.project}}'
+- name: repo_type
+  type: string
+  default: 'TfsGit'
+- name: branch_name
+  type: string
+  default: 'main'
+- name: pipeline_yaml_path
+  type: string
+  default: 'azure-pipeline.yaml'
+- name: repo_id
+  type: string
+- name: pipeline_name
+  type: string
+- name: pipeline_variable_group
+  type: string
+  default: pipeline-variable-group
+- name: service_connection_name
+  type: string
+  default: ''
+
+stages:
+- stage: 'CreatePipeline'
+  jobs:
+  - job: Terraform
+    displayName: 'Execute Terraform'
+    steps:
+    - script: |
+        terraform init
+        terraform validate
+         if [ "$${{ "{{" }} parameters.repo_type }}" = "TfsGit" ]; then
+          terraform plan -out=tfplan -input=false -var 'org_service_url=$${{ "{{" }} parameters.org_service_url }}' -var 'devops-project-id=$${{ "{{" }} parameters.devops_project_id  }}' -var 'pipeline-name=$${{ "{{" }} parameters.pipeline_name  }}' -var 'repo_type=$${{ "{{" }} parameters.repo_type  }}' -var 'repo_id=$${{ "{{" }} parameters.repo_id }}' -var 'branch_name=$${{ "{{" }} parameters.branch_name }}' -var 'pipeline_yaml_path=$${{ "{{" }} parameters.pipeline_yaml_path }}' -var 'pipeline_variable_groups=["$${{ "{{" }} parameters.pipeline_variable_group }}"]'
+        else
+          terraform plan -out=tfplan -input=false -var 'org_service_url=$${{ "{{" }} parameters.org_service_url }}' -var 'devops-project-id=$${{ "{{" }} parameters.devops_project_id  }}' -var 'pipeline-name=$${{ "{{" }} parameters.pipeline_name  }}' -var 'repo_type=$${{ "{{" }} parameters.repo_type  }}' -var 'repo_id=$${{ "{{" }} parameters.repo_id }}' -var 'branch_name=$${{ "{{" }} parameters.branch_name }}' -var 'pipeline_yaml_path=$${{ "{{" }} parameters.pipeline_yaml_path }}' -var 'pipeline_variable_groups=["$${{ "{{" }} parameters.pipeline_variable_group }}"]' -var 'service_connection_name=$${{ "{{" }} parameters.service_connection_name }}'
+        fi
+        terraform apply -input=false tfplan
+      env:
+        AZDO_PERSONAL_ACCESS_TOKEN: $(PAT)
+
+

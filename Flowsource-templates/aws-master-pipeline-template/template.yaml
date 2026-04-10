@@ -1,0 +1,75 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: aws-master-pipeline-template
+  title: AWS Master Pipeline
+  description: Create a AWS master pipeline repository
+  tags:
+  - aws-cicd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - repo_name
+    - default_branch
+    - regionName
+    - codebuild_service_role_arn
+    - codepipeline_service_role_arn
+    - s3_bucket
+
+    properties:
+      repo_name:
+        title: Repository Name
+        type: string
+        description: Name of the repository to create
+      default_branch:
+        title: Default Branch
+        type: string
+        description: Default branch for the repository
+      regionName:
+        title: Region Name
+        type: string
+        description: AWS region to use
+      codebuild_service_role_arn:
+        title: CodeBuild Service Role ARN
+        type: string
+        description: ARN of the CodeBuild service role with permissions to create resources. This role should have permissions to create resources in the account.
+      codepipeline_service_role_arn:
+        title: CodePipeline Service Role ARN
+        type: string
+        description: ARN of the CodePipeline service role with permissions to create resources. This role should have permissions to create resources in the account.
+      s3_bucket:
+        title: S3 Bucket
+        type: string
+        description: S3 bucket for the pipeline artifacts
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        repo_name: ${{parameters.repo_name}}
+        default_branch: ${{parameters.default_branch}}
+        codebuild_service_role_arn: ${{ parameters.codebuild_service_role_arn }}
+        codepipeline_service_role_arn: ${{ parameters.codepipeline_service_role_arn }}
+        s3_bucket: ${{ parameters.s3_bucket }}
+
+  - id: publish
+    name: Publish
+    action: aws:codecommit:publish
+    input:
+      repositoryName: ${{parameters.repo_name}}
+      defaultBranch: ${{parameters.default_branch}}
+  
+  output:
+    links:
+    - title: Repository
+      url: https://${{parameters.regionName}}.console.aws.amazon.com/codesuite/codecommit/repositories/${{parameters.repo_name}}/browse/refs/heads/${{parameters.default_branch}}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

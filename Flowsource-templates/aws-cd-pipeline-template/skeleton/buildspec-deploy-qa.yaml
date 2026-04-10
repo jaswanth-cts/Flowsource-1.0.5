@@ -1,0 +1,39 @@
+version: 0.2
+
+env:
+  variables:
+    CODEBUILD_ROLE_ARN: "${{values.code_build_arn}}"
+
+phases:
+  install:
+    # runtime-versions:
+    commands:
+      # Installing Terraform
+      - echo Installing Terraform...
+      - curl -o terraform.zip https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+      - unzip terraform.zip
+      - mv terraform /usr/local/bin/
+      - terraform --version
+
+  pre_build:
+    commands:
+      - echo Initializing Terraform...
+      - cd ./environments/qa # Change to the directory containing your Terraform configuration files
+      - terraform init
+
+  build:
+    commands:
+      - echo Planning Terraform changes...
+      - terraform plan -out=tfplan
+
+  post_build:
+    commands:
+      # Get AWS Credential using STS Assume Role for kubectl
+      - echo "Setting Environment Variables related to AWS CLI for Kube Config Setup"          
+      - CREDENTIALS=$(aws sts assume-role --role-arn $CODEBUILD_ROLE_ARN --role-session-name eks-codebuild --duration-seconds 900)
+      - export AWS_ACCESS_KEY_ID="$(echo ${CREDENTIALS} | jq -r '.Credentials.AccessKeyId')"
+      - export AWS_SECRET_ACCESS_KEY="$(echo ${CREDENTIALS} | jq -r '.Credentials.SecretAccessKey')"
+      - export AWS_SESSION_TOKEN="$(echo ${CREDENTIALS} | jq -r '.Credentials.SessionToken')"
+      - export AWS_EXPIRATION=$(echo ${CREDENTIALS} | jq -r '.Credentials.Expiration')
+      - echo Applying Terraform changes...
+      - terraform apply -auto-approve tfplan

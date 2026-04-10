@@ -1,0 +1,26 @@
+[
+    {
+        "keyword_or": [ "what", "explain" ],
+        "keyword_and": [ "Docs" ],
+        "question": "What is TechDocs?",
+        "answer": "Docs-like-code solution. Engineers write their documentation in Markdown files which live together with their code - and with little configuration get a nice-looking doc site"
+    },
+    {
+        "keyword_or": [ "support", "file format", "markdown" ],
+        "keyword_and": [ "Docs" ],
+        "question": "Does Docs support file formats other than Markdown?",
+        "answer": "In Docs, the files have to be in Markdown format."
+    },
+    {
+        "keyword_or": [ "microservice", "TicketBooking", "Ticket Booking" ],
+        "keyword_and": [ "functionality" ],
+        "question": "What is the functionality of this microservice?",
+        "answer": "Ticket booking application provides functionality to book movie tickets for the screening shows. It aims to facilitate the seamless booking of tickets for various events, movies, or transportation services."
+    },
+    {
+        "keyword_or": [ "service", "component", "TicketBooking", "Ticket Booking" ],
+        "keyword_and": [ "tech stack" ],
+        "question": "What is the tech stack of this microservice?",
+        "answer": "Angular, Springboot, H2, Restful API"
+    }
+]

@@ -1,0 +1,145 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-AKS-cluster-template
+  title: Create AKS Cluster Template
+  description: Create a new AKS cluster using terraform scripts
+  tags:
+  - aks
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+  - title: Provide some simple information to create an AKS cluster
+    required:
+    - subscription_id
+    - tenant_id
+    - client_id
+    - client_secret
+    - rg_name
+    - rg_location
+    - cluster_name
+    - vnet
+    - aks_subnet
+    - namespace
+    - user_managed_identity_cp
+    - user_managed_identity_kubelet
+    properties:
+      subscription_id:
+        title: Subscription ID
+        type: string
+        description: Azure Kubernetes Service Cluster subscription id
+      tenant_id:
+        title: Tenant ID
+        type: string
+        description: Azure Kubernetes Service Cluster tenant id
+      client_id:
+        title: Client ID
+        type: string
+        description: Azure Kubernetes Service Cluster client id
+      client_secret:
+        title: Client Secret
+        type: string
+        description: Azure Kubernetes Service Cluster client secret
+      rg_name:
+        title: Resource Group Name
+        type: string
+        description: Provide the name of Azure Resource Group
+      rg_location:
+        title: Resource Group Location
+        type: string
+        description: Provide the name of Azure Resource Group Location
+      cluster_name:
+        title: Cluster Name
+        type: string
+        description: Provide the Azure Cluster Name
+      node_vm_size:
+        title: Node VM Size
+        type: string
+        description: The type of VM for the Node Pool
+      min_count:
+        title: Min Count
+        type: number
+        description: The minimum number of nodes for the Node Pool
+      max_count:
+        title: Max Count
+        type: number
+        description: The maximum number of nodes for the Node Pool
+      vnet:
+        title: Vnet
+        type: string
+        description: The VNET for the Cluster
+      aks_subnet:
+        title: AKS Subnet
+        type: string
+        description: The subnet for the Cluster
+      agic_enable_flag:
+        title: Agic Enable Flag
+        type: boolean
+        description: Set to false if agic ingress controller should not be setup
+        default: false
+      namespace:
+        title: Namespace
+        type: string
+        description: The namespace to create within Kubernetes
+      user_managed_identity_cp:
+        title: User Managed Identity cp
+        type: string
+        description: The name for the user managed identity for control plane.
+      user_managed_identity_kubelet:
+        title: User Managed Identity Kubelet
+        type: string
+        description: The name for the user managed identity for kubelet.
+
+  - title: Choose a location
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - dev.azure.com
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        name: ${{ parameters.name }}
+        description: ${{ parameters.description }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+        owner: ${{ parameters.owner }}
+        subscription_id: ${{ parameters.subscription_id }}
+        tenant_id: ${{ parameters.tenant_id }}
+        client_id: ${{ parameters.client_id }}
+        client_secret: ${{ parameters.client_secret }}
+        rg_name: ${{ parameters.rg_name }}
+        rg_location: ${{ parameters.rg_location }}
+        cluster_name: ${{ parameters.cluster_name }}
+        node_vm_size: ${{ parameters.node_vm_size }}
+        min_count: ${{ parameters.min_count }}
+        max_count: ${{ parameters.max_count }}
+        vnet: ${{ parameters.vnet }}
+        aks_subnet: ${{ parameters.aks_subnet }}
+        agic_enable_flag: ${{ parameters.agic_enable_flag }}
+        namespace: ${{ parameters.namespace }}
+        user_managed_identity_cp: ${{ parameters.user_managed_identity_cp }}
+        user_managed_identity_kubelet: ${{ parameters.user_managed_identity_kubelet }}
+
+  - id: publish
+    name: Publish
+    action: publish:azure
+    input:
+      allowedHosts:
+      - dev.azure.com
+      description: This is ${{ parameters.name }}
+      repoUrl: ${{ parameters.repoUrl }}
+
+  output:
+    links:
+    - title: Repository
+      url: https://dev.azure.com/${{ (parameters.repoUrl | parseRepoUrl).organization }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/_git/${{ (parameters.repoUrl | parseRepoUrl).repo }}

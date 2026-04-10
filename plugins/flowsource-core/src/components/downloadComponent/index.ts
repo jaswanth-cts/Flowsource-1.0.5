@@ -1,0 +1,1 @@
+export { downloadComponent } from './downloadComponent';

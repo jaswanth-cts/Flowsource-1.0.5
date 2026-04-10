@@ -1,0 +1,1 @@
+export { CicdAzurePipelineComponent } from './CicdAzurePipelineComponent';

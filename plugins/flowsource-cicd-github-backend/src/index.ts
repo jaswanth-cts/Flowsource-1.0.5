@@ -1,0 +1,1 @@
+export { flowsourceCicdGithubBackendPlugin as default } from './plugin'

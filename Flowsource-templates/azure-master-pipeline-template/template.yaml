@@ -1,0 +1,50 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: azure-master-pipeline-template
+  title: Create Azure master pipeline Template
+  description: Create a master pipeline in Azure using terraform scripts
+  tags:
+    - azure-ci
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - dev.azure.com
+  steps:
+    - id: template
+      name: Fetch Skeleton + Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+          owner: ${{ parameters.owner }}
+          organization: ${{ (parameters.repoUrl | parseRepoUrl)['organization'] }}
+          project: ${{ (parameters.repoUrl | parseRepoUrl)['project'] }}
+
+    - id: publish
+      name: Publish
+      action: publish:azure
+      input:
+        allowedHosts:
+          - dev.azure.com
+        description: This is ${{ parameters.name }}
+        repoUrl: ${{ parameters.repoUrl }}
+
+  output:
+    links:
+      - title: Repository
+        url: https://dev.azure.com/${{ (parameters.repoUrl | parseRepoUrl).organization }}/${{ (parameters.repoUrl | parseRepoUrl).project }}/_git/${{ (parameters.repoUrl | parseRepoUrl).repo }}

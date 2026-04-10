@@ -1,0 +1,76 @@
+version: 0.2
+
+# ============================================================
+# FlowSource - Infrastructure Pipeline (Stage 1)
+# Provisions EKS Cluster + RDS PostgreSQL via Terraform
+# References: FlowSource-infra-provision/aws/eks-flowsource-env/
+# ============================================================
+
+env:
+  variables:
+    TERRAFORM_VERSION: "1.14.8"
+    INFRA_DIR: "FlowSource-infra-provision/aws/eks-flowsource-env"
+    TF_STATE_BUCKET: ""           # Populated via pipeline environment variable
+    TF_STATE_KEY: "infra/eks-cluster/terraform.tfstate"
+    TF_STATE_REGION: ""           # Populated via pipeline environment variable
+    AWS_REGION: ""                # Populated via pipeline environment variable
+    INFRA_TFVARS: "cicd/infra-pipeline/infra-terraform.tfvars"
+    SKIP_EKS_CLUSTER: "false"     # Set to "true" via pipeline env var to skip EKS creation
+
+phases:
+  install:
+    commands:
+      - |
+        if [ "${SKIP_EKS_CLUSTER}" = "true" ]; then
+          echo "=== SKIP_EKS_CLUSTER=true — EKS cluster already exists. Skipping this stage. ==="
+          exit 0
+        fi
+      - echo "=== Installing Terraform ${TERRAFORM_VERSION} ==="
+      - curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      - unzip -q terraform.zip && mv terraform /usr/local/bin/ && rm terraform.zip
+      - terraform --version
+      - echo "=== Installing AWS CLI v2 ==="
+      - curl -sLo awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+      - unzip -q awscliv2.zip && ./aws/install --update && rm -rf awscliv2.zip aws/
+      - aws --version
+
+  pre_build:
+    commands:
+      - echo "=== Copying terraform.tfvars from repo ==="
+      - cp ${INFRA_TFVARS} ${INFRA_DIR}/terraform.tfvars
+      - echo "=== Configuring Terraform S3 backend ==="
+      - |
+        cat > ${INFRA_DIR}/backend-override.tf <<EOF
+        terraform {
+          backend "s3" {
+            bucket  = "${TF_STATE_BUCKET}"
+            key     = "${TF_STATE_KEY}"
+            region  = "${TF_STATE_REGION}"
+            encrypt = true
+          }
+        }
+        EOF
+      - echo "=== Initializing Terraform ==="
+      - cd ${INFRA_DIR}
+      - terraform init -reconfigure
+
+  build:
+    commands:
+      - echo "=== Running Terraform Plan ==="
+      - terraform plan -var-file="terraform.tfvars" -out=tfplan-eks.out
+      - echo "Plan completed. Review above output."
+
+  post_build:
+    commands:
+      - echo "=== Applying Terraform for EKS Cluster + RDS ==="
+      - terraform apply -auto-approve tfplan-eks.out
+      - echo "=== Capturing Outputs ==="
+      - terraform output -json > /tmp/infra-outputs.json
+      - cat /tmp/infra-outputs.json
+      - echo "=== Uploading outputs to S3 for downstream stages ==="
+      - aws s3 cp /tmp/infra-outputs.json s3://${TF_STATE_BUCKET}/cicd-artifacts/infra-outputs.json
+
+artifacts:
+  files:
+    - /tmp/infra-outputs.json
+  discard-paths: yes

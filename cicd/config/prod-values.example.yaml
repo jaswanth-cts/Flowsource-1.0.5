@@ -1,0 +1,79 @@
+# ============================================================
+# FlowSource - PROD Environment Values
+# Upload this file to S3: flowsource/config/prod/values.yaml
+# Reference: FlowSourceInstaller/helm-chart/docs/example-values-alb-ingress-with-oidc.yaml
+# ============================================================
+
+global:
+  replicaCount: 2
+  namespace: "flowsource"
+
+flowsource:
+  useInternalPostgres: false
+
+  ingress:
+    useIngress: true
+    ingressClass: alb
+    annotations: |
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internal
+      alb.ingress.kubernetes.io/load-balancer-name: flowsource-prod-lb
+      alb.ingress.kubernetes.io/group.name: flowsource-prod
+      alb.ingress.kubernetes.io/subnets: <PRIVATE_SUBNET_1>, <PRIVATE_SUBNET_2>
+      alb.ingress.kubernetes.io/target-type: ip
+      # SSL (required for OIDC auth)
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:<AWS_REGION>:<AWS_ACCOUNT_ID>:certificate/<CERT_ID>
+      alb.ingress.kubernetes.io/backend-protocol: HTTP
+      # Uncomment for OIDC authentication at the ALB layer
+      # alb.ingress.kubernetes.io/auth-type: oidc
+      # alb.ingress.kubernetes.io/auth-idp-oidc: '<OIDC_JSON>'
+      # alb.ingress.kubernetes.io/auth-session-timeout: '900'
+
+  flowsourceDeploy:
+    image: "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/flowsource:<VERSION>"
+    imagePullPolicy: Always
+    serviceAccount:
+      name: default
+
+  flowsourceConfig:
+    NODE_OPTIONS: "--no-node-snapshot"
+    INSIGHTS_URL: "http://DUMMY"
+    SONARQUBE_URL: "http://DUMMY"
+    CHECKMARX_BASE_URL: "https://security.checkmarx.net/cxrestapi/help"
+    CHECKMARX_AUTH_URL: "https://security.checkmarx.net/CxRestAPI/auth/identity/connect/token"
+    DEVOPS_GURU_FILTER_FROM_TIME: 0
+    ChatBotJsonsFolderPath: "/app/chatbot"
+    FLOWSOURCE_BASE_URL: "https://<PROD_ALB_DNS_NAME>"
+    FLOWSOURCE_VERSION: "1.0.5"
+    S3_BUCKET_NAME: "<YOUR_S3_BUCKET>"
+    S3_AWS_REGION: "<AWS_REGION>"
+    POSTGRES_SERVICE_HOST: "<RDS_ENDPOINT_PROD>"
+    POSTGRES_SERVICE_PORT: "5432"
+    POSTGRES_USER: "<DB_USER>"
+    TECHDOCS_STORAGE_PROVIDER_TYPE: "awsS3"
+    TECHDOCS_STORAGE_CONTAINER_NAME: "<TECHDOCS_S3_BUCKET>"
+    CHATBOT_ENABLED: "true"
+    JIRA_USER_EMAIL: "<JIRA_EMAIL>"
+    JIRA_BASE_URL: "https://<JIRA_DOMAIN>/rest/api/3/"
+    JIRA_TARGET: "https://<JIRA_DOMAIN>"
+    AZURE_DEVOPS_ORGANIZATION: "<ADO_ORG>"
+
+  flowsourceSecrets:
+    useSecretProvider: true
+    secretproviderDetails:
+      provider: aws
+      aws:
+        region: "<AWS_REGION>"
+        secretARN: "<ARN_OF_PROD_SECRETS_MANAGER_SECRET>"
+      secretObjects:
+        - keyVaultObjectName: GITHUB_TOKEN
+          secretName: GITHUB_TOKEN
+        - keyVaultObjectName: AUTH_GITHUB_CLIENT_ID
+          secretName: AUTH_GITHUB_CLIENT_ID
+        - keyVaultObjectName: AUTH_GITHUB_CLIENT_SECRET
+          secretName: AUTH_GITHUB_CLIENT_SECRET
+        - keyVaultObjectName: POSTGRES_PASSWORD
+          secretName: POSTGRES_PASSWORD
+        - keyVaultObjectName: BACKEND_SECRET
+          secretName: BACKEND_SECRET
+    secrets: {}

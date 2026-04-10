@@ -1,0 +1,1 @@
+export { AwsFaultInjectionComponent } from './AwsFaultInjectionComponent';

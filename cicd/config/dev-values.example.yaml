@@ -1,0 +1,75 @@
+# ============================================================
+# FlowSource - DEV Environment Values
+# Upload this file to S3: flowsource/config/dev/values.yaml
+# Reference: FlowSourceInstaller/helm-chart/docs/example-values-alb-ingress.yaml
+# ============================================================
+
+global:
+  replicaCount: 1
+  namespace: "flowsource-dev"
+
+flowsource:
+  useInternalPostgres: false
+
+  ingress:
+    useIngress: true
+    ingressClass: alb
+    annotations: |
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internal
+      alb.ingress.kubernetes.io/load-balancer-name: flowsource-dev-lb
+      alb.ingress.kubernetes.io/group.name: flowsource-dev
+      alb.ingress.kubernetes.io/subnets: <PRIVATE_SUBNET_1>, <PRIVATE_SUBNET_2>
+      alb.ingress.kubernetes.io/target-type: ip
+
+  flowsourceDeploy:
+    # Image is resolved at deploy time from ECR — update with your ECR URI
+    image: "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/flowsource:<VERSION>"
+    imagePullPolicy: Always
+    serviceAccount:
+      name: default
+
+  flowsourceConfig:
+    NODE_OPTIONS: "--no-node-snapshot"
+    INSIGHTS_URL: "http://DUMMY"
+    SONARQUBE_URL: "http://DUMMY"
+    CHECKMARX_BASE_URL: "https://security.checkmarx.net/cxrestapi/help"
+    CHECKMARX_AUTH_URL: "https://security.checkmarx.net/CxRestAPI/auth/identity/connect/token"
+    DEVOPS_GURU_FILTER_FROM_TIME: 0
+    ChatBotJsonsFolderPath: "/app/chatbot"
+    FLOWSOURCE_BASE_URL: "http://<DEV_ALB_DNS_NAME>"
+    FLOWSOURCE_VERSION: "1.0.5"
+    S3_BUCKET_NAME: "<YOUR_S3_BUCKET>"
+    S3_AWS_REGION: "<AWS_REGION>"
+    POSTGRES_SERVICE_HOST: "<RDS_ENDPOINT_DEV>"
+    POSTGRES_SERVICE_PORT: "5432"
+    POSTGRES_USER: "<DB_USER>"
+    TECHDOCS_STORAGE_PROVIDER_TYPE: "awsS3"
+    TECHDOCS_STORAGE_CONTAINER_NAME: "<TECHDOCS_S3_BUCKET>"
+    CHATBOT_ENABLED: "false"
+    JIRA_USER_EMAIL: "DUMMY"
+    JIRA_BASE_URL: "https://DUMMY/rest/api/3/"
+    JIRA_TARGET: "https://DUMMY"
+    AZURE_DEVOPS_ORGANIZATION: "DUMMY"
+
+  flowsourceSecrets:
+    useSecretProvider: true
+    secretproviderDetails:
+      provider: aws
+      aws:
+        region: "<AWS_REGION>"
+        secretARN: "<ARN_OF_SECRETS_MANAGER_SECRET>"
+      secretObjects:
+        # IMPORTANT: Secret key names in AWS Secrets Manager must NOT contain hyphens
+        # Use underscores — JMESPath requirement
+        - keyVaultObjectName: GITHUB_TOKEN
+          secretName: GITHUB_TOKEN
+        - keyVaultObjectName: AUTH_GITHUB_CLIENT_ID
+          secretName: AUTH_GITHUB_CLIENT_ID
+        - keyVaultObjectName: AUTH_GITHUB_CLIENT_SECRET
+          secretName: AUTH_GITHUB_CLIENT_SECRET
+        - keyVaultObjectName: POSTGRES_PASSWORD
+          secretName: POSTGRES_PASSWORD
+        - keyVaultObjectName: BACKEND_SECRET
+          secretName: BACKEND_SECRET
+    secrets: {}

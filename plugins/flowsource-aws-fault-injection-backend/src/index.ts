@@ -1,0 +1,1 @@
+export { flowsourceAwsFaultInjectionBackendPlugin as default } from './plugin'

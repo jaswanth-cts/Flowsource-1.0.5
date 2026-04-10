@@ -1,0 +1,1 @@
+export { JiraComponent } from './JiraComponent';

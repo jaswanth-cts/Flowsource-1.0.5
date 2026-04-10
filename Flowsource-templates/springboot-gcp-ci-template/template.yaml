@@ -1,0 +1,192 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: springboot-java-gcp-ci-template
+  title: Spring Boot with GCP CI pipeline Using GitHub
+  description: Create a simple GCP CI Java SpringBoot Application
+  tags:
+  - springboot
+  - java
+  - cicd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - component_id
+    - java_package_name
+    - java_group_id
+    - java_artifact_id
+    - gcp_location
+    - gcp_logs_bucket
+    - gcp_artifact_registry_repo_name
+    - sonar_project_key
+    - checkmarx_project_name
+    - blackduck_project_name
+    - namespace
+    - appName
+    - owner
+    - default_branch
+    properties:
+      component_id:
+        title: Name
+        type: string
+        description: Unique name of the component
+        ui:field: EntityNamePicker
+      java_package_name:
+        title: Java Package Name
+        type: string
+        description: Name for the java package. eg (io.backstage.blah)
+      java_group_id:
+        title: Java Group ID
+        type: string
+        description: Name for the java app Group ID. eg (io.backstage.blah)
+      java_artifact_id:
+        title: Java Artifact ID
+        type: string
+        description: Name for the java app Artifact ID. eg (io.backstage.blah)
+      gcp_location:
+        title: GCP Location
+        type: string
+        description: Name of the GCP location. eg (us-central1)
+      gcp_logs_bucket:
+        title: GCP Logs Bucket
+        type: string
+        description: Name of the GCP logs bucket. eg (gs://bucketname)
+      gcp_artifact_registry_repo_name:
+        title: GCP Artifact Registry Repo Name
+        type: string
+        description: Name of the GCP artifact registry repository name. eg (javaregistryrepo)
+        maxLength: 63
+        pattern: '^[a-z][a-z0-9-]*[a-z0-9]$'
+        ui:autofocus: true
+        ui:help: 'Hint: Names may only contain lowercase letters, numbers, and hyphens, and must begin with a letter and end with a letter or number'
+      description:
+        title: Description
+        type: string
+        description: Help others understand what this website is for.
+      sonar_project_key:
+        title: Project Key of Sonarqube
+        type: string
+        description: Name of the Sonarqube Project Key
+        ui:autofocus: true
+      checkmarx_project_name:
+        title: Project Name of Checkmarx
+        type: string
+        description: Name of the Project for Checkmarx Scan
+        ui:autofocus: true
+      blackduck_project_name:
+        title: Project Name of Blackduck
+        type: string
+        description: Name of the Project for Blackduck Scan
+        ui:autofocus: true
+      namespace:
+        title: Namespace
+        description: Name of the namespace used in Kubernetes deployment
+        type: string
+      appName:
+        title: App Name
+        description: App name used to set the Kubernetes label selector
+        type: string   
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Branch name for the repository. eg('main' or 'master')
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+  - title: Choose a location
+    required:
+    - repoUrl
+    - collaborators
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+      collaborators:
+        title: GitHub Team Collaborators
+        type: string
+        description: Name of the GitHub team to add as collaborators
+        ui:autofocus: true
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      copyWithoutRender:
+      - .github/workflows/*
+      values:
+        component_id: ${{ parameters.component_id }}
+        description: ${{ parameters.description }}
+        artifact_id: ${{ parameters.java_artifact_id }}
+        group_id: ${{ parameters.java_group_id }}
+        java_package_name: ${{ parameters.java_package_name }}
+        java_package_name_slash: ${{ parameters.java_package_name.replaceAll('.', '/') }}
+        owner: ${{ parameters.owner }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+        gcp_location: ${{ parameters.gcp_location }}
+        gcp_logs_bucket: ${{ parameters.gcp_logs_bucket }}
+        gcp_artifact_registry_repo_name: ${{ parameters.gcp_artifact_registry_repo_name }}
+        sonar_project_key: ${{ parameters.sonar_project_key }}
+        checkmarx_project_name: ${{ parameters.checkmarx_project_name }}
+        blackduck_project_name: ${{ parameters.blackduck_project_name }}
+        namespace: ${{ parameters.namespace }}
+        appName: ${{ parameters.appName }}
+        repo_name: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+        triggerName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-ci-trigger
+        http_port: 8080
+
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.component_id }}
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.default_branch }}
+      collaborators:
+        - team: ${{ parameters.owner }}/${{ parameters.collaborators }}
+          access: push
+      protectDefaultBranch: false
+
+  - id: apply-trigger
+    name: Create GCP CloudBuild Trigger
+    action: gcp:cloudbuild:create
+    # The if condition is set to true to enable CI pipeline setup. Ensure that the following preconditions are met for it to work correctly:
+    # 1. Google Cloud Build app in GitHub has All repositories access.
+    # 2. GCP master pipeline is set up in GCP CloudBuild and its details are configured in app-config.yaml.
+    # If the prerequisites are not met, please set it to FALSE.
+    if: ${{ true }}
+    input:
+      branchName: ${{ parameters.default_branch }}
+      githubConnectionName: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+      githubRepositoryName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+      githubRepositoryOwner: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+      triggerName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-ci-trigger
+
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+      catalogInfoPath: "/catalog-info.yaml"
+
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

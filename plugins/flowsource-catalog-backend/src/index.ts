@@ -1,0 +1,1 @@
+export { flowsourceCatalogBackendPlugin as default } from './plugin'

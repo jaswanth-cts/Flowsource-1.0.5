@@ -1,0 +1,1 @@
+export { WellArchitectedComponent } from './WellArchitectedComponent';

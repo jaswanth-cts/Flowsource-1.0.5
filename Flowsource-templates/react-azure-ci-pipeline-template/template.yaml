@@ -1,0 +1,71 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: react-azure-ci-pipeline-template
+  title: React App With Azure CI pipeline
+  description: Create a simple React Application With Azure CI Pipeline
+  tags:
+  - react
+  - ci
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+  - title: Provide some simple information
+    required:
+    - name
+    properties:
+      name:
+        title: Name
+        type: string
+        description: Unique name of the component
+        ui:field: EntityNamePicker
+      description:
+        title: Description
+        type: string
+        description: Help others understand what this website is for.
+  - title: Choose a location
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - dev.azure.com
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        name: ${{ parameters.name }}
+        description: ${{ parameters.description }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+
+  - id: publish
+    name: Publish
+    action: publish:azure
+    input:
+      allowedHosts:
+      - dev.azure.com
+      description: This is ${{ parameters.name }}
+      repoUrl: ${{ parameters.repoUrl }}
+
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      repoContentsUrl: https://dev.azure.com/${{ (parameters.repoUrl | parseRepoUrl).organization }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/_git/${{ (parameters.repoUrl | parseRepoUrl).repo }}
+      catalogInfoPath: "/catalog-info.yaml"
+
+  output:
+    links:
+    - title: Repository
+      url: https://dev.azure.com/${{ (parameters.repoUrl | parseRepoUrl).organization }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/_git/${{ (parameters.repoUrl | parseRepoUrl).repo }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

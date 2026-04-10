@@ -1,0 +1,9 @@
+rg_name = "rg-flowsource"
+rg_location = "eastus"
+cluster_name = "flowsource-test"
+chart = "../../../FlowSourceCharts"
+values-files = ["../../../FlowSourceChartValues/flowsource-instance-values-kvsecrets.yaml", "../../../FlowSourceChartValues/app-config.yaml","../../../FlowSourceChartValues/all-configurations.yaml"]
+#values-files = ["../../../FlowSourceChartValues/flowsource-instance-values-k8-secrets.yaml", "../../../FlowSourceChartValues/app-config.yaml","../../../FlowSourceChartValues/all-configurations.yaml"]
+namespace = "flowsource"
+deploymentname = "flowsourcedeploy"
+clustertype = "aks"

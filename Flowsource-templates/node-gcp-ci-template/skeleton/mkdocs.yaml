@@ -1,0 +1,8 @@
+site_name: Node Application
+site_description: This is the official Node Application documentation.
+
+nav:
+  - Ticket Booking: index.md
+
+plugins:
+  - techdocs-core

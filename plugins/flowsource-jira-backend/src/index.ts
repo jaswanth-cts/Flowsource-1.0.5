@@ -1,0 +1,1 @@
+export { flowsourceJiraBackendPlugin as default } from './plugin'

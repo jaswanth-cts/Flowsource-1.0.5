@@ -1,0 +1,1 @@
+export { flowsourceGithubCopilotBackendPlugin as default } from './plugin';

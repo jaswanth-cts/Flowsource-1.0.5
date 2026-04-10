@@ -1,0 +1,111 @@
+# Default values for demochart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+appconfig:
+allconfigurations:
+  files:
+#    - name: filename
+#      content: YAML content. Use |- to specify the content
+global:
+  replicaCount: 1
+  namespace: flowsource
+
+flowsource:
+  service:
+    type: ClusterIP
+#    annotations: |
+#      annotation1: "annotation value"
+
+  useInternalPostgres: false
+  ingress:
+    host: {}
+    useIngress: false
+    ingressClass: {}
+#      annotations: |
+#        annotation1: "annotation value"
+#        blockannotation: |
+#          blockconfigline1
+#          blockconfigline2
+  flowsourceDeploy:
+    serviceAccount: {}
+    image: {}
+    imagePullPolicy: IfNotPresent
+  flowsourceConfig:
+    NODE_OPTIONS: "--no-node-snapshot"
+#    INSIGHTS_URL:
+#    SONARQUBE_URL:
+#    CHECKMARX_BASE_URL:
+#    CHECKMARX_AUTH_URL:
+    DEVOPS_GURU_FILTER_FROM_TIME: 0
+    ChatBotJsonsFolderPath: "/app/chatbot"
+    FLOWSOURCE_BASE_URL: "http://localhost:7007"
+#    DATADOG_SITE:
+#    S3_BUCKET_NAME:
+    FLOWSOURCE_VERSION: 1.0
+#    JIRA_USER_EMAIL:
+#    JIRA_BASE_URL:
+#    JIRA_TARGET:
+#    AZURE_DEVOPS_ORGANIZATION:
+#    S3_AWS_REGION:
+#    TECHDOCS_STORAGE_PROVIDER_TYPE:
+#    TECHDOCS_STORAGE_CONTAINER_NAME:
+#    CHATBOT_ENABLED:
+#    POSTGRES_SERVICE_HOST:
+#    POSTGRES_SERVICE_PORT: '5432'
+#    POSTGRES_USER:
+  
+  flowsourceSecrets:
+    useSecretProvider: true
+    # secretProviderDetails is required if useSecretProvider is true
+    secretproviderDetails:
+      provider: # One of aws, azure or gke
+      ######### Provider specific configuration block #####
+      #Required in case of azure
+      azure:
+        keyvaultName: # Required in case of azure
+        tenantId: # Required in case of azure
+        userManagedIdentityClientId: #Set the clientID of the user-assigned managed identity to use. Required for Azure
+      #Required in case of aws  
+      aws:
+        region: # Region of secrets manager
+        secretARN: # ARN of the secrets manager
+      #Required in case of GKE  
+      gke:
+        project: # The project id for teh secret store
+      ######### End of Provider specific configuration block #####
+      
+      # secretObjects is required if useSecretProvider is true
+      secretObjects:
+#        - keyVaultObjectName: GITHUB-TOKEN
+#          secretName: GITHUB_TOKEN
+#        - keyVaultObjectName: AUTH-GITHUB-CLIENT-ID-TOKEN
+#          secretName: AUTH_GITHUB_CLIENT_ID
+#        - keyVaultObjectName: POSTGRES-PASSWORD
+#          secretName: POSTGRES_PASSWORD
+    secrets:
+#      GITHUB_TOKEN:
+#      S3_AWS_ACCESS_KEY:
+#      S3_AWS_SECRET_KEY:
+#      WELL_ARCHITECTED_AWS_ACCESS_KEY:
+#      WELL_ARCHITECTED_AWS_SECRET_KEY:
+#      AUTH_GITHUB_CLIENT_ID:
+#      AUTH_GITHUB_CLIENT_SECRET:
+#      AUTH_ATLASSIAN_CLIENT_ID:
+#      AUTH_ATLASSIAN_CLIENT_SECRET:
+#      JIRA_TOKEN:
+#      SONARQUBE_TOKEN:
+#      INSIGHTS_API_KEY:
+#      CHECKMARX_CLIENT_ID:
+#      CHECKMARX_CLIENT_SECRET:
+#      CHECKMARX_USERNAME:
+#      CHECKMARX_PASSWORD:
+#      CHECKMARX_GRANT_TYPE:
+#      AZURE_DEVOPS_TOKEN:
+#      DEVOPS_GURU_AWS_ACCESS_KEY_ID:
+#      DEVOPS_GURU_AWS_SECRET_ACCESS_KEY:
+#      JIRA_ACCESS_KEY:
+#      DATADOG_API_KEY:
+#      DATADOG_APP_KEY:
+#      TECHDOCS_AZURE_BLOB_STORAGE_ACCOUNT_NAME:
+#      TECHDOCS_AZURE_BLOB_STORAGE_ACCOUNT_KEY:

@@ -1,0 +1,1 @@
+export { AzureRepoComponent } from './AzureRepoComponent';

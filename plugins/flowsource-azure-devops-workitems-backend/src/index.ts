@@ -1,0 +1,1 @@
+export { flowsourceAzureDevopsWorkitemsBackendPlugin as default } from './plugin'

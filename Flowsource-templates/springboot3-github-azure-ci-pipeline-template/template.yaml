@@ -1,0 +1,182 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: springboot-github-azure-ci-pipeline-template
+  title: Spring Boot With Azure CI pipeline Using Github
+  description: Create a simple Java SpringBoot Application With Azure CI Pipeline using Github
+  tags:
+  - java
+  - springboot
+  - cicd
+  - azure
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - name
+    - java_package_name
+    - java_group_id
+    - java_artifact_id
+    - sonarProjectKey
+    - checkmarxProjectName
+    - blackduckProjectName
+    - default_branch
+    - organization
+    - project
+    - namespace
+    - appName
+    - owner
+    properties:
+      name:
+        title: Name
+        type: string
+        description: Unique name of the component
+        ui:field: EntityNamePicker
+      java_package_name:
+        title: Java Package Name
+        type: string
+        description: Name for the java package. eg (io.backstage.blah)
+      java_group_id:
+        title: Java Group ID
+        type: string
+        description: Name for the java app Group ID. eg (io.backstage.blah)
+      java_artifact_id:
+        title: Java Artifact ID
+        type: string
+        description: Name for the java app Artifact ID. eg (io.backstage.blah)
+        ui:field: ValidationField
+        ui:options:
+          regex: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+          errorMessage: Must start and end with a letter or number, and can contain letters, numbers, hyphens, and dots in between.Maximum length is 50 characters.
+      description:
+        title: Description
+        type: string
+        description: Help others understand what this website is for.
+      sonarProjectKey:
+        title: Project Key of Sonarqube
+        type: string
+        description: Name of the Sonarqube Project Key
+        ui:autofocus: true
+      checkmarxProjectName:
+        title: Project Name of Checkmarx
+        type: string
+        description: Name of the Project for Checkmarx Scan
+        ui:autofocus: true
+      blackduckProjectName:
+        title: Project Name of Blackduck
+        type: string
+        description: Name of the Project for Blackduck Scan
+        ui:autofocus: true
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Branch name for the repository. eg('main' or 'master')
+      organization:
+        title: Organizaton
+        type: string
+        description: Organization to which Azure Pipeline should be created
+      project:
+        title: Project
+        type: string
+        description: Project to which Azure Pipeline should be created
+      namespace:
+        title: Namespace
+        description: Name of the namespace used in Kubernetes deployment
+        type: string
+      appName:
+        title: App Name
+        description: App name used to set the Kubernetes label selector
+        type: string
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+            - Group
+  - title: Choose a location
+    required:
+    - repoUrl
+    - collaborators
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+      collaborators:
+        title: GitHub Team Collaborators
+        type: string
+        description: Name of the GitHub team to add as collaborators
+        ui:autofocus: true
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        name: ${{ parameters.name }}
+        description: ${{ parameters.description }}
+        artifact_id: ${{ parameters.java_artifact_id }}
+        group_id: ${{ parameters.java_group_id }}
+        java_package_name: ${{ parameters.java_package_name }}
+        java_package_name_slash: ${{ parameters.java_package_name.replaceAll('.', '/') }}
+        branchName: ${{ parameters.branchName }}
+        sonarProjectKey: ${{ parameters.sonarProjectKey }}
+        checkmarxProjectName: ${{ parameters.checkmarxProjectName }}
+        blackduckProjectName: ${{ parameters.blackduckProjectName }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+        http_port: 8080
+        default_branch: ${{ parameters.default_branch }}
+        project: ${{ parameters.project }}
+        owner: ${{ parameters.owner }}
+        repo_name: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+        namespace: ${{ parameters.namespace }}
+        appName: ${{ parameters.appName }}
+
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.name }}
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.default_branch }}
+      collaborators:
+        - team: ${{ parameters.owner }}/${{ parameters.collaborators }}
+          access: push
+      protectDefaultBranch: false
+
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+      catalogInfoPath: "/catalog-info.yaml"
+
+  - id: apply-pipeline
+    name: Create Azure Pipeline
+    action: azure:pipeline:create
+    input: 
+      organization: ${{ parameters.organization }}
+      project: ${{ parameters.project }}
+      repositoryName: ${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl)['repo'] }}
+      repoType: 'GitHub'
+      branchName: ${{ parameters.default_branch }}
+      serviceConnectionName: ${{ serviceConnectionName }}
+
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

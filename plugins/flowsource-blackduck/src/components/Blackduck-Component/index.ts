@@ -1,0 +1,1 @@
+export { BlackduckComponent } from './BlackduckComponent';

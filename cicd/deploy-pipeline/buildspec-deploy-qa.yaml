@@ -1,0 +1,252 @@
+version: 0.2
+
+# ============================================================
+# FlowSource - Deploy Pipeline (QA Environment)
+# Deploys FlowSource Helm chart to EKS QA namespace.
+# This stage runs after DEV approval or automatic promotion.
+# ============================================================
+
+env:
+  variables:
+    TERRAFORM_VERSION: "1.14.8"
+    AWS_REGION: ""
+    CLUSTER_NAME: ""
+    NAMESPACE: "flowsource-qa"
+    DEPLOYMENT_NAME: "flowsource-qa"
+    TF_STATE_BUCKET: ""
+    TF_STATE_KEY: "deploy/qa/terraform.tfstate"
+    TF_STATE_REGION: ""
+    BUILD_ROLE_ARN: ""
+    HELM_CHART_DIR: "FlowSourceInstaller/helm-chart"
+    TF_DEPLOY_DIR: "FlowSourceInstaller/terraform-scripts"
+    VALUES_FILES_DIR: "FlowSourceInstaller/terraform-scripts/values-files"
+
+phases:
+  install:
+    commands:
+      - echo "=== Installing Terraform ${TERRAFORM_VERSION} ==="
+      - curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      - unzip -q terraform.zip && mv terraform /usr/local/bin/ && rm terraform.zip
+      - terraform --version
+      - echo "=== Installing Helm ==="
+      - curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      - helm version
+      - echo "=== Installing kubectl ==="
+      - curl -sLo kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      - chmod +x kubectl && mv kubectl /usr/local/bin/
+      - |
+        if [ "${BUILD_SERVER_TYPE}" = "ubuntu" ]; then
+          apt-get install -y jq
+        fi
+      - pip3 install pyyaml --quiet --root-user-action=ignore
+
+  pre_build:
+    commands:
+      - echo "=== Assuming CodeBuild Role for EKS access ==="
+      - CREDENTIALS=$(aws sts assume-role --role-arn ${BUILD_ROLE_ARN} --role-session-name eks-deploy-qa --duration-seconds 3600)
+      - export AWS_ACCESS_KEY_ID="$(echo ${CREDENTIALS} | jq -r '.Credentials.AccessKeyId')"
+      - export AWS_SECRET_ACCESS_KEY="$(echo ${CREDENTIALS} | jq -r '.Credentials.SecretAccessKey')"
+      - export AWS_SESSION_TOKEN="$(echo ${CREDENTIALS} | jq -r '.Credentials.SessionToken')"
+      - echo "=== Configuring kubeconfig for EKS cluster ${CLUSTER_NAME} ==="
+      - aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
+      - echo "=== Using values files from repo ${VALUES_FILES_DIR} ==="
+      - ls -la ${VALUES_FILES_DIR}/
+      - echo "=== Getting image from build artifact ==="
+      - aws s3 cp s3://${TF_STATE_BUCKET}/cicd-artifacts/imageDetail.json /tmp/imageDetail.json
+      - IMAGE_URI=$(cat /tmp/imageDetail.json | jq -r '.imageUri')
+      - echo "Deploying image ${IMAGE_URI}"
+      - echo "IMAGE_URI=${IMAGE_URI}" > /tmp/deploy-env.sh
+      - kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
+      - cp ${TF_DEPLOY_DIR}/provider.tf.eks ${TF_DEPLOY_DIR}/provider.tf
+      - echo "=== Labeling existing resources for Helm adoption (prevents ownership conflict) ==="
+      - |
+        adopt_resource() {
+          local resource=$1
+          kubectl annotate ${resource} -n ${NAMESPACE} \
+            "meta.helm.sh/release-name=${DEPLOYMENT_NAME}" \
+            "meta.helm.sh/release-namespace=${NAMESPACE}" \
+            --overwrite 2>/dev/null || true
+          kubectl label ${resource} -n ${NAMESPACE} \
+            "app.kubernetes.io/managed-by=Helm" \
+            --overwrite 2>/dev/null || true
+        }
+        # Generic pass: catch any resources already carrying app.kubernetes.io/instance label
+        for kind in deployment service ingress serviceaccount configmap; do
+          kubectl get ${kind} -n ${NAMESPACE} -l "app.kubernetes.io/instance=${DEPLOYMENT_NAME}" --no-headers 2>/dev/null | awk '{print $1}' | while read name; do
+            adopt_resource "${kind}/${name}"
+          done
+        done
+        # Explicit pass: chart templates use app:flowsource (not app.kubernetes.io/instance),
+        # so the above selector misses these three resources — target them by their fixed chart names
+        SA_NAME=$(python3 -c "import yaml,os; v=yaml.safe_load(open(os.environ['VALUES_FILES_DIR']+'/values.yaml')); print(v['flowsource']['flowsourceDeploy']['serviceAccount']['name'])" 2>/dev/null || echo "")
+        for resource in "ingress/flowsource-ingress" "secretproviderclass/flowsource-secrets-provider" "serviceaccount/${SA_NAME}"; do
+          [ -z "${resource##*/}" ] && continue
+          adopt_resource "${resource}"
+        done
+      - echo "=== Removing stale Helm release state to allow clean upgrade ==="
+      - kubectl delete secret -n ${NAMESPACE} -l owner=helm || true
+      - echo "=== Helm state cleared ==="
+
+  build:
+    commands:
+      - . /tmp/deploy-env.sh
+      - echo "=== Fixing awsalb auth provider issuer to use Cognito instead of Azure AD ==="
+      - "sed -i 's|issuer: https://login.microsoftonline.com/\\${AUTH_AZURE_TENANT_ID}/v2.0|issuer: ${COGNITO_ISSUER_URL}|g' ${VALUES_FILES_DIR}/app-config.yaml"
+      - echo "=== Verifying awsalb issuer substitution ==="
+      - grep "issuer:" ${VALUES_FILES_DIR}/app-config.yaml
+      - echo "=== Fixing Helm chart template for numeric secret encoding ==="
+      - sed -i 's/{{ $val | b64enc }}/{{ $val | toString | b64enc }}/g' ${CODEBUILD_SRC_DIR}/${HELM_CHART_DIR}/templates/flowsource-secrets.yaml
+      - echo "=== Adding missing secrets to CSI secretObjects ==="
+      - |
+        python3 - <<'PYEOF'
+        import yaml, os
+        path = os.environ['VALUES_FILES_DIR'] + '/values.yaml'
+        with open(path) as f:
+            v = yaml.safe_load(f)
+        objs = v['flowsource']['flowsourceSecrets']['secretproviderDetails']['secretObjects']
+        existing = {s['secretName'] for s in objs}
+        for key in ['BACKEND_SECRET', 'ROLE_RESTAPI_APIKEY', 'AUTH_SESSION_SECRET', 'AUTH_AWS_COGNITO_CLIENT_ID', 'AUTH_AWS_COGNITO_CLIENT_SECRET']:
+            if key not in existing:
+                objs.append({'keyVaultObjectName': key, 'secretName': key})
+        with open(path, 'w') as f:
+            yaml.dump(v, f, default_flow_style=False, allow_unicode=True)
+        print('secretObjects updated:', [s['secretName'] for s in objs])
+        PYEOF
+      - echo "=== Injecting image URI into values.yaml ==="
+      - |
+        sed -i "s|image: .*|image: \"${IMAGE_URI}\"|" ${VALUES_FILES_DIR}/values.yaml
+      - |
+        cat > ${TF_DEPLOY_DIR}/backend-override.tf <<EOF
+        terraform {
+          required_version = "~> 1.3"
+          backend "s3" {
+            bucket  = "${TF_STATE_BUCKET}"
+            key     = "${TF_STATE_KEY}"
+            region  = "${TF_STATE_REGION}"
+            encrypt = true
+          }
+        }
+        EOF
+      - cd ${TF_DEPLOY_DIR}
+      - terraform init -reconfigure
+      - |
+        terraform plan \
+          -var="region=${AWS_REGION}" \
+          -var="cluster_name=${CLUSTER_NAME}" \
+          -var="chart=../../${HELM_CHART_DIR}" \
+          -var="namespace=${NAMESPACE}" \
+          -var="deploymentname=${DEPLOYMENT_NAME}" \
+          -var="clustertype=eks" \
+          -var="create_namespace=true" \
+          -var="timeout=600" \
+          -var="values-files=[\"${CODEBUILD_SRC_DIR}/${VALUES_FILES_DIR}/values.yaml\",\"${CODEBUILD_SRC_DIR}/${VALUES_FILES_DIR}/app-config.yaml\",\"${CODEBUILD_SRC_DIR}/${VALUES_FILES_DIR}/all-configurations.yaml\"]" \
+          -out=tfplan-deploy-qa.out
+
+  post_build:
+    commands:
+      - echo "=== Applying Terraform (Helm Deploy) for QA ==="
+      - cd ${CODEBUILD_SRC_DIR}/${TF_DEPLOY_DIR} && terraform apply -auto-approve tfplan-deploy-qa.out
+      - echo "=== Patching ConfigMap with all flowsourceConfig values ==="
+      - |
+        python3 - <<'PYEOF'
+        import yaml, os, subprocess, json
+
+        path = os.environ['CODEBUILD_SRC_DIR'] + '/' + os.environ['VALUES_FILES_DIR'] + '/values.yaml'
+        with open(path) as f:
+            v = yaml.safe_load(f)
+
+        config = v['flowsource']['flowsourceConfig']
+        namespace = os.environ['NAMESPACE']
+
+        # Convert all values to strings (kubectl requires string values in ConfigMap)
+        data = {k: str(val) for k, val in config.items()}
+
+        patch = {'data': data}
+        patch_json = json.dumps(patch)
+        result = subprocess.run([
+            'kubectl', 'patch', 'configmap', 'flowsource-cm',
+            '-n', namespace, '--type=merge', '-p', patch_json
+        ], capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode != 0:
+            print('WARNING: ConfigMap patch failed:', result.stderr)
+        else:
+            print('ConfigMap patched with', len(data), 'keys')
+        PYEOF
+      - echo "=== Patching SecretProviderClass with all required secret keys ==="
+      - |
+        python3 - <<'PYEOF'
+        import yaml, os, subprocess, json
+
+        path = os.environ['CODEBUILD_SRC_DIR'] + '/' + os.environ['VALUES_FILES_DIR'] + '/values.yaml'
+        with open(path) as f:
+            v = yaml.safe_load(f)
+
+        objs = v['flowsource']['flowsourceSecrets']['secretproviderDetails']['secretObjects']
+        secret_arn = v['flowsource']['flowsourceSecrets']['secretproviderDetails']['aws']['secretARN']
+        region = v['flowsource']['flowsourceSecrets']['secretproviderDetails']['aws']['region']
+        namespace = os.environ['NAMESPACE']
+
+        jmes_entries = '\n'.join(
+            f'          - path: {o["keyVaultObjectName"]}\n            objectAlias: {o["secretName"]}'
+            for o in objs
+        )
+        objects_str = (
+            f'- objectName: {secret_arn}\n'
+            f'  objectType: secretsmanager\n'
+            f'  jmesPath:\n{jmes_entries}\n'
+        )
+
+        secret_data = [{'key': o['secretName'], 'objectName': o['secretName']} for o in objs]
+
+        patch = {
+            'spec': {
+                'parameters': {
+                    'objects': objects_str,
+                    'region': region
+                },
+                'secretObjects': [{
+                    'secretName': 'flowsource-secrets',
+                    'type': 'Opaque',
+                    'data': secret_data
+                }]
+            }
+        }
+
+        patch_json = json.dumps(patch)
+        result = subprocess.run([
+            'kubectl', 'patch', 'secretproviderclass', 'flowsource-secrets-provider',
+            '-n', namespace, '--type=merge', '-p', patch_json
+        ], capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode != 0:
+            print('WARNING: SecretProviderClass patch failed:', result.stderr)
+        else:
+            print('SecretProviderClass patched with keys:', [o['secretName'] for o in objs])
+        PYEOF
+      - K8S_DEPLOYMENT_NAME=$(kubectl get deployment -n ${NAMESPACE} -o jsonpath='{.items[0].metadata.name}')
+      - CONTAINER_NAME=$(kubectl get deployment/${K8S_DEPLOYMENT_NAME} -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].name}')
+      - echo "=== Downloading RDS CA bundle and creating ConfigMap ==="
+      - curl -sLo /tmp/rds-ca.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+      - kubectl create configmap rds-ca-bundle -n ${NAMESPACE} --from-file=rds-ca.pem=/tmp/rds-ca.pem --dry-run=client -o yaml | kubectl apply -f -
+      - echo "=== Patching Deployment to mount RDS CA bundle ==="
+      - |
+        kubectl patch deployment/${K8S_DEPLOYMENT_NAME} -n ${NAMESPACE} --type=strategic -p="{
+          \"spec\": {\"template\": {\"spec\": {
+            \"volumes\": [{\"name\": \"rds-ca\", \"configMap\": {\"name\": \"rds-ca-bundle\"}}],
+            \"containers\": [{\"name\": \"${CONTAINER_NAME}\", \"volumeMounts\": [{\"name\": \"rds-ca\", \"mountPath\": \"/etc/ssl/certs/rds-ca.pem\", \"subPath\": \"rds-ca.pem\", \"readOnly\": true}]}]
+          }}}
+        }"
+      - echo "=== Removing global TLS bypass ==="
+      - kubectl set env deployment/${K8S_DEPLOYMENT_NAME} -n ${NAMESPACE} NODE_TLS_REJECT_UNAUTHORIZED- || true
+      - echo "=== Restarting deployment to apply env changes ==="
+      - kubectl rollout restart deployment/${K8S_DEPLOYMENT_NAME} -n ${NAMESPACE}
+      - echo "=== Verifying QA deployment ==="
+      - kubectl rollout status deployment/${K8S_DEPLOYMENT_NAME} -n ${NAMESPACE} --timeout=300s || true
+      - kubectl get pods -n ${NAMESPACE}
+      - kubectl get svc -n ${NAMESPACE}
+      - echo "=== QA deployment completed ==="
+
+artifacts:
+  files:
+    - "**/*"

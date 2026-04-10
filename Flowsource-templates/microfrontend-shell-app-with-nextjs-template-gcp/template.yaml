@@ -1,0 +1,171 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: microfrontend-shell-app-with-nextjs-gcp-template
+  title: Microfrontend Shell App with NextJs for GCP
+  description: Create a new Microfrontend Shell app using NextJs and Typescript.
+  tags:
+    - nextjs
+    - typescript
+    - ci
+    - gcp
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+    - title: Provide some simple information
+      required:
+        - name
+        - owner
+        - default_branch
+        - gcp_location
+        - gcp_logs_bucket
+        - gcp_artifact_registry_repo_name
+        - sonarProjectKey
+        - checkmarxProjectName
+        - blackduckProjectName
+        - namespace
+        - appName
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the component
+          ui:field: EntityNamePicker
+        default_branch:
+          title: Branch Name
+          type: string
+          description: Branch name for the repository. eg('main' or 'master')  
+        description:
+          title: Description
+          type: string
+          description: Help others understand what this project is for.
+        gcp_location:
+          title: GCP Location
+          type: string
+          description: Name of the GCP location. eg (us-central1)
+        gcp_logs_bucket:
+          title: GCP Logs Bucket
+          type: string
+          description: Name of the GCP logs bucket. eg (gs://bucketname)
+        gcp_artifact_registry_repo_name:
+          title: GCP Artifact Registry Repo Name
+          type: string
+          description: Name of the GCP artifact registry repository name. eg (javaregistryrepo)
+          maxLength: 63
+          pattern: '^[a-z][a-z0-9-]*[a-z0-9]$'
+          ui:help: 'Hint: Names may only contain lowercase letters, numbers, and hyphens, and must begin with a letter and end with a letter or number'
+        sonarProjectKey:
+          title: Project Key of Sonarqube
+          type: string
+          description: Name of the Sonarqube Project Key
+        checkmarxProjectName:
+          title: Project Name of Checkmarx
+          type: string
+          description: Name of the Project for Checkmarx Scan
+        blackduckProjectName:
+          title: Project Name of Blackduck
+          type: string
+          description: Name of the Project for Blackduck Scan
+        namespace:
+          title: Namespace
+          description: Name of the namespace used in Kubernetes deployment
+          type: string
+        appName:
+          title: App Name
+          description: App name used to set the Kubernetes label selector
+          type: string   
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds:
+              - Group
+    - title: Choose a location
+      required:
+        - repoUrl
+        - collaborators
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+        collaborators:
+          title: GitHub Team Collaborators
+          type: string
+          description: Name of the GitHub team to add as collaborators
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      copyWithoutRender:
+        - .github/workflows/*
+      values:
+        name: ${{ parameters.name }}
+        description: ${{ parameters.description }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+        owner: ${{ parameters.owner }}
+        default_branch: ${{ parameters.default_branch }}
+        gcp_location: ${{ parameters.gcp_location }}
+        gcp_logs_bucket: ${{ parameters.gcp_logs_bucket }}
+        gcp_artifact_registry_repo_name: ${{ parameters.gcp_artifact_registry_repo_name }}
+        repo_name: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+        pipelineName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-pipeline
+        projectName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-build-project
+        sonarProjectKey: ${{ parameters.sonarProjectKey }}
+        checkmarxProjectName: ${{ parameters.checkmarxProjectName }}
+        blackduckProjectName: ${{ parameters.blackduckProjectName }}
+        namespace: ${{ parameters.namespace }}
+        appName: ${{ parameters.appName }}
+        triggerName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-ci-trigger
+
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.component_id }}
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.default_branch }}
+      collaborators:
+          - team: ${{ parameters.owner }}/${{ parameters.collaborators }}
+            access: push
+      protectDefaultBranch: false
+
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+      catalogInfoPath: "/catalog-info.yaml"
+
+  - id: apply-trigger
+    name: Create GCP CloudBuild Trigger
+    action: gcp:cloudbuild:create
+    # The if condition is set to true to enable CI pipeline setup. Ensure that the following preconditions are met for it to work correctly:
+    # 1. Google Cloud Build app in GitHub has All repositories access.
+    # 2. GCP master pipeline is set up in GCP CloudBuild and its details are configured in app-config.yaml.
+    # If the prerequisites are not met, please set it to FALSE.
+    if: ${{ true }}
+    input:
+      branchName: ${{ parameters.default_branch }}
+      githubConnectionName: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+      githubRepositoryName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+      githubRepositoryOwner: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+      triggerName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-ci-trigger
+      region: us-east1    
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

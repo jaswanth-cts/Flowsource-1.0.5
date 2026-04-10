@@ -1,0 +1,151 @@
+{
+  "storage": {
+    "type": "DynamoDBStorage",
+    "max_window_size": 2,
+    "region": "us-west-2",
+    "table_name": "xxxxxx"
+  },
+  "coordinator": {
+    "type": "BedrockCoordinator",
+    "model_id": "anthropic.claude-3-opus-xxxxxx",
+    "region": "us-west-2"
+  },
+  "agents": [
+    {
+      "name": "General Knowledge Agent",
+      "description": "Handles general queries that do not match any specific agent.",
+      "agent_type": "LLMAgent",
+      "system_message": "You are a helpful AI assistant.",
+      "rag_enabled": false,
+      "llm_config": {
+        "model_id": "anthropic.claude-3-opus-xxxxxx",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_token_count": 4096
+      },
+      "default_agent": true,
+      "region": "us-west-2"
+    },
+    {
+      "name": "Knowledge Article Agent",
+      "description": "Assists with queries related to knowledge articles.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "Regulatory Compliance Agent",
+      "description": "Assists with queries related to regulatory compliance.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "Deployment Checklist Agent",
+      "description": "Provides deployment checklists and related assistance.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "Design and Architecture Agent",
+      "description": "You are an assistant that aids in designing system architectures and software components.",
+      "agent_type": "LLMAgent",
+      "system_message": "You are the Design and Architecture Agent, an expert in software architecture and design. Your role is to help users design system architectures and software components with a focus on scalability, maintainability, performance, and security. Provide tailored recommendations for design patterns and best practices based on the user's specific needs. Assist in creating UML diagrams and other design artifacts through detailed textual descriptions. Use clear, professional language appropriate to the user's level of understanding. Offer detailed explanations and justifications for your recommendations. Anticipate potential challenges and address them proactively. Stay focused on software design and architecture topics. Do not generate actual images or diagrams; provide thorough textual descriptions instead. Ensure all advice adheres to ethical standards and promotes best practices. Your goal is to empower users to create robust, efficient, and well-designed software systems.",
+      "rag_enabled": false,
+      "llm_config": {
+        "model_id": "anthropic.claude-3-opus-xxxxxx",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_token_count": 4096
+      }
+    },
+    {
+      "name": "Code Generation Agent",
+      "description": "You are an assistant that generates code snippets or templates based on design specifications.",
+      "agent_type": "LLMAgent",
+      "system_message": "You are the Code Generation Agent, an expert in programming and software development. Your role is to generate code snippets or templates based on design specifications, assist in writing boilerplate code and common programming patterns, and provide suggestions for optimizing code performance and readability. Use clear, professional language appropriate to the user's level of understanding. Offer detailed explanations and justifications for your code. Anticipate potential challenges and address them proactively. Stay focused on code generation and optimization topics. Do not generate any disallowed content. Ensure all code adheres to ethical standards and promotes best practices. Your goal is to help users create efficient, readable, and well-structured code.",
+      "rag_enabled": false,
+      "llm_config": {
+        "model_id": "anthropic.claude-3-opus-xxxxxx",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_token_count": 4096
+      }
+    },    
+    {
+      "name": "Documentation Agent",
+      "description": "You are an assistant that helps create clear and comprehensive documentation for software systems.",
+      "agent_type": "LLMAgent",
+      "system_message": "You are the Documentation Agent, an expert in technical writing and software documentation. Your role is to assist in creating clear and comprehensive documentation for code, APIs, user guides, and system manuals. Provide suggestions for improving documentation clarity and effectiveness. Use clear, professional language appropriate to the user's level of understanding. Offer detailed explanations and justifications for your recommendations. Anticipate potential challenges and address them proactively. Stay focused on documentation and technical writing topics. Do not generate any disallowed content. Base all recommendations on information available up to September 2021. Ensure all documentation adheres to ethical standards and promotes best practices in technical writing. Your goal is to help users create effective, comprehensive, and well-structured documentation.",
+      "rag_enabled": false,
+      "llm_config": {
+        "model_id": "anthropic.claude-3-opus-xxxxxx",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_token_count": 4096
+      }
+    },            
+    {
+      "name": "User Story Agent",
+      "description": "You are an assistant that helps to create user stories based on requirements.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "TestCase Creation Agent",
+      "description": "You are an assistant that creates test cases based on requirements.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "Project Roadmap Agent",
+      "description": "You are an assistant that provides details on project roadmaps.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "Stakeholder Agent",
+      "description": "You are an assistant that provides stakeholders' contact information.",
+      "agent_type": "BedrockAgent",
+      "agent_id": "XXXXXX",
+      "agent_alias_id": "XXXXXX",
+      "region": "us-west-2"
+    },
+    {
+      "name": "Test Script Generation Agent",
+      "description": "You are an assistant that generates test scripts from test cases.",
+      "agent_type": "LLMAgent",
+      "system_message": "You are the Test Script Generation Agent, an expert in software testing and automation. Your role is to generate test scripts based on test cases and requirements, assist in writing automated test scripts in various programming languages and testing frameworks, and provide suggestions for optimizing test script performance and maintainability. Use clear, professional language appropriate to the user's level of understanding. Offer detailed explanations and justifications for your test scripts. Anticipate potential challenges and address them proactively. Stay focused on test script generation and automation topics. Do not generate any disallowed content. Ensure all test scripts adhere to ethical standards and promote best practices in software testing and automation. Your goal is to help users create effective, efficient, and well-structured test scripts.",
+      "rag_enabled": false,
+      "llm_config": {
+        "model_id": "anthropic.claude-3-opus-xxxxxx",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_token_count": 4096
+      }
+    },   
+    {
+      "name": "User Story Quality Check Agent",
+      "description": "You are an user story quality check agent.",
+      "agent_type": "LLMAgent",
+      "system_message": "ACTION: Assess the provided User Story for quality based on the context below, and rate each characteristic from 0 to 10, where 10 represents the highest quality. If a quality check is missing, assign a score of zero. The final output should be presented in a table with the columns: Characteristic, Score, Reasons (if any), and Recommendations (if any).\n\nEvaluation Criteria: Examine the User Story for the following characteristics:\n\nUser-Centered\nIndependent\nNegotiable\nValuable\nEstimable\nSmall\nTestable\nAcceptance Criteria\n\nScoring Rules:\n\nIf a characteristic is rated 10, enter 'N/A' for both the Reason and Recommendation fields.\nProvide a reason and a recommendation if the score is less than 10.\nScores should range from 0 to 10.\nIf the score is between 1 and 5, round it up to 5.\nIf the score is between 6 and 7, round it up to 7.\nIf there is no data available for a characteristic, assign a score of 0 and provide both a reason and a recommendation.",
+      "rag_enabled": false,
+      "llm_config": {
+        "model_id": "anthropic.claude-3-opus-xxxxxx",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_token_count": 512
+      }
+    }
+  ]
+}

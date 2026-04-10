@@ -1,0 +1,1 @@
+export { flowsourceCheckmarxBackendPlugin as default } from './plugin'

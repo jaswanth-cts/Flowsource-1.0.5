@@ -1,0 +1,110 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    # Use your own secrets manager name here instead of 'flowsource-ci-cd-template-secrets' 
+    CHECKMARX_BASE_URL: flowsource-ci-cd-template-secrets:CHECKMARX_BASE_URL
+    CHECKMARX_USERNAME: flowsource-ci-cd-template-secrets:CHECKMARX_USERNAME
+    CHECKMARX_PASSWORD: flowsource-ci-cd-template-secrets:CHECKMARX_PASSWORD
+    CX_TEAM: flowsource-ci-cd-template-secrets:CX_TEAM
+    SONAR_URL: flowsource-ci-cd-template-secrets:SONAR_URL
+    SONAR_TOKEN: flowsource-ci-cd-template-secrets:SONAR_TOKEN
+    AWS_ECR_URL: flowsource-ci-cd-template-secrets:AWS_ECR_URL
+    BLACKDUCK_DETECT_URL: flowsource-ci-cd-template-secrets:BLACKDUCK_DETECT_URL
+    BLACKDUCK_URL: flowsource-ci-cd-template-secrets:BLACKDUCK_URL
+    BLACKDUCK_TOKEN: flowsource-ci-cd-template-secrets:BLACKDUCK_TOKEN
+  variables:
+    SONAR_PROJECT: ${{values.sonarProjectKey}}
+    CX_PROJECT: ${{values.checkmarxProjectName}}
+    BLACKDUCK_PROJECT: ${{values.blackduckProjectName}}
+    REPOSITORY_NAME: ${{values.repo_name}}
+    AWS_REGION: ${{values.regionName}}
+
+phases:
+  install:
+    # Specifying the runtime versions
+    runtime-versions:
+      java: corretto17
+    commands:
+      - echo Checking Maven Version...
+      - mvn -version
+
+  pre_build:
+    commands:
+      - echo "******** RUNNING CHECKMARX SCAN ***********"
+      - mkdir -p /usr/local/bin/checkmarx-cli
+      - curl -o /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -L https://download.checkmarx.com/9.5.0/Plugins/CxConsolePlugin-1.1.30.zip
+      - unzip /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -d /usr/local/bin/checkmarx-cli/
+      - chmod +x /usr/local/bin/checkmarx-cli/runCxConsole.sh
+      - sourceLocation=$(pwd)
+      - |
+        /usr/local/bin/checkmarx-cli/runCxConsole.sh Scan -v \
+          -CxServer "$CHECKMARX_BASE_URL" \
+          -CxUser "$CHECKMARX_USERNAME" \
+          -CxPassword "$CHECKMARX_PASSWORD" \
+          -ProjectName "$CX_TEAM\\$CX_PROJECT" \
+          -LocationType "folder" \
+          -LocationPath "$sourceLocation/" \
+          -preset "Cognizant Default Preset" \
+          -ReportPDF "$sourceLocation/$CX_PROJECT.pdf"
+      - echo "******** RUNNING SONARQUBE SCAN ***********"
+      - echo "Sonar Project is $SONAR_PROJECT"
+      - echo "Sonar URL is $SONAR_URL"
+      - |
+        mvn clean verify sonar:sonar \
+          -Dsonar.projectKey=$SONAR_PROJECT \
+          -Dsonar.host.url=$SONAR_URL \
+          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.java.binaries=target/classes \
+          -Dsonar.tests.inclusions=src/test
+      - echo "******** RUNNING BLACKDUCK SCAN ***********"
+      - |
+        curl -s -L "${BLACKDUCK_DETECT_URL}" | bash -s -- \
+          --blackduck.url=$BLACKDUCK_URL \
+          --blackduck.api.token=$BLACKDUCK_TOKEN \
+          --detect.project.name="$BDH_PROJECT" \
+          --detect.project.version.name="ver.1" \
+          --blackduck.trust.cert=true \
+          --detect.timeout=3600 \
+          --detect.detector.search.depth=0 \
+          --detect.tools=ALL,IAC_SCAN \
+          --detect.blackduck.signature.scanner.individual.file.matching=ALL \
+          --detect.detector.search.continue=true \
+          --logging.level.com.synopsys.integration=DEBUG \
+          --detect.risk.report.pdf=true \
+          --detect.risk.report.pdf.path="report" \
+          --detect.blackduck.signature.scanner.snippet.matching=SNIPPET_MATCHING \
+          --detect.excluded.directories=.git
+
+  build:
+    commands:
+      - echo Running Maven test cases on `date`
+      - mvn test
+      - echo Packaging the application 
+      - mvn package spring-boot:repackage
+      - echo Creating build_output directory and copying JAR file
+      - mkdir -p build_output
+      - cp target/${{values.artifact_id}}.jar build_output/
+
+  post_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      # Command to login to ECR
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ECR_URL
+      - REPOSITORY_URI=$AWS_ECR_URL/$REPOSITORY_NAME
+      - echo $REPOSITORY_URI
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      # Command to build the Docker image
+      - docker build -t $REPOSITORY_NAME .
+      - docker tag $REPOSITORY_NAME:latest $REPOSITORY_URI:latest
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      # Command to push the Docker image
+      - docker push $REPOSITORY_URI:latest
+      - echo Push completed on `date`
+      - echo "******** DONE ***********"
+
+artifacts: 
+  files: 
+    - build_output/*.jar

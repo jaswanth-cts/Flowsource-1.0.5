@@ -1,0 +1,8 @@
+project_id             = "<google-project-id>"
+trigger_name           = "<cloudbuild-trigger-name>"
+region                 = "us-east1"
+github_repo_owner      = "<github-organization>"
+github_repo_name       = "<github-repo-name>"
+branch_name            = "^<github-repo-branch>$"
+cloudbuild_yaml_path   = "<cloudbuild-file-name>"
+service_account_email  = "<service-account-email>"

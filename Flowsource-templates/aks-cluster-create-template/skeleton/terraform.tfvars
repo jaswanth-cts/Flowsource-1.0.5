@@ -1,0 +1,16 @@
+subscription_id = "${{values.subscription_id}}"
+tenant_id = "${{values.tenant_id}}"
+client_id = "${{values.client_id}}"
+client_secret = "${{values.client_secret}}"
+rg_name = "${{values.rg_name}}"
+rg_location = "${{values.rg_location}}"
+cluster_name = "${{values.cluster_name}}"
+node_vm_size = "${{values.node_vm_size}}"
+min_count = ${{values.min_count}}
+max_count = ${{values.max_count}}
+vnet = "${{values.vnet}}"
+aks-subnet = "${{values.aks_subnet}}"
+agic_enable_flag = ${{values.agic_enable_flag}}
+namespace = "${{values.namespace}}"
+user_managed_identity_cp = "${{values.user_managed_identity_cp}}"
+user_managed_identity_kubelet = "${{values.user_managed_identity_kubelet}}"

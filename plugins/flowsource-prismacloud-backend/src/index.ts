@@ -1,0 +1,1 @@
+export { flowsourcePrismaCloudBackendPlugin as default } from './plugin'

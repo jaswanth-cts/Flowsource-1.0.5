@@ -1,0 +1,58 @@
+parameters:
+- name: environment # specify the environment
+  type: string
+- name: variablegroup
+  type: string
+  default: cd-pipeline-variablegroup
+
+variables:
+- group: ${{ parameters.variablegroup | default('${{ parameters.variablegroup }}', true) }} # Reference the variable group here
+- name: tenantid
+  value: $[variables.tenant_id]
+- name: subscriptionid
+  value: $[variables.subscription_id]
+- name: clientid
+  value: $[variables.client_id]
+- name: clientsecret
+  value: $[variables.client_secret]
+- name: environment
+  value: ${{ parameters.environment | default('${{ parameters.environment }}', true) }}
+
+stages:
+- stage: 'Deploy'
+  pool:
+    vmImage: 'ubuntu-latest'
+    jdkVersion: "1.17"
+  jobs:
+  - job: Terraform
+    displayName: 'Execute Terraform'
+    steps:
+    - script: |
+        terraform -chdir=environments/$(environment) init
+        terraform -chdir=environments/$(environment) validate
+      displayName: 'Terraform Init and Validate'
+      env:
+        ARM_TENANT_ID: $(tenantid)
+        ARM_SUBSCRIPTION_ID: $(subscriptionid)
+        ARM_CLIENT_ID: $(clientid)
+        ARM_CLIENT_SECRET: $(clientsecret)
+
+    - script: |
+        terraform -chdir=environments/$(environment) plan -out=tfplan -input=false
+
+      displayName: 'Terraform Plan'
+      env:
+        ARM_TENANT_ID: $(tenantid)
+        ARM_SUBSCRIPTION_ID: $(subscriptionid)
+        ARM_CLIENT_ID: $(clientid)
+        ARM_CLIENT_SECRET: $(clientsecret)
+
+    - script: |
+        terraform -chdir=environments/$(environment) apply -input=false tfplan
+      displayName: 'Terraform Apply'
+      condition: succeeded()
+      env:
+        ARM_TENANT_ID: $(tenantid)
+        ARM_SUBSCRIPTION_ID: $(subscriptionid)
+        ARM_CLIENT_ID: $(clientid)
+        ARM_CLIENT_SECRET: $(clientsecret)

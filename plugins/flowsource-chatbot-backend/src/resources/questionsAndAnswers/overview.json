@@ -1,0 +1,32 @@
+[
+    {
+        "keyword_or": [ "what", "explain" ],
+        "keyword_and": [ "cognizant flowsource" ],
+        "question": "What is Cognizant Flowsource?",
+        "answer": "Cognizant Flowsource is an open platform for building developer portals. It provides a centralized place for all your software development needs. It is a developer portal that standardizes how teams provision and access services while providing a modern, developer-friendly user experience."
+    },
+    {
+        "keyword_or": [ "features", "tabs" ],
+        "keyword_and": [ "cognizant flowsource" ],
+        "question": "What are the features of Cognizant Flowsource?",
+        "answer": "Features: Stories, Well Architected, Sonarqube, DevOps Guru, Code Repository, CI/CD, Code Quality, Security, Observability, Dora Metrics, Docs, Dependencies"
+    },
+    {
+        "keyword_or": [ "previous", "last" ],
+        "keyword_and": [ "When", "prod", "deployment" ],
+        "question": "When was the last production deployment?",
+        "answer": "Last production deployment was on 2024-01-04 10:00:00"
+    },
+    {
+        "keyword_and": [ "latest", "version", "component" ],
+        "question": "What is the latest version of component?",
+        "answer": "Latest version of component is 2.1.0"
+    },
+    {
+        "keyword_or": [ "List", "What" ],
+        "keyword_and": [ "security", "vulnerabilit" ],
+        "question": "List/What are the Security vulnerabilities found in the application?",
+        "answer": "There are some medium and high vulnerabilities found in the application. \n Below are the High vulnerabilities found in the application: \n Reflected_XSS_All_Clients in BookingController.java \n Unsafe_Object_Binding in BookingService.java \n Weak_Encryption in Encryption.java \n JWT_Use_Of_Hardcoded_Secret in JWTTokenUtil.java \n SSRF in RestServices.java \n "
+    }
+
+]

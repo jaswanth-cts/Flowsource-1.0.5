@@ -1,0 +1,18 @@
+{
+    "region"                            : "<AWS_REGION>",
+    "cluster_name"                      : "<CLUSTER_NAME>",
+    "cluster_version"                   : "<CLUSTER_VERSION>",
+    "eks_subnet_ids"                    : ["<SUBNET_1>", "<SUBNET_2>", "<SUBNET_3>"],
+    "vpc_id"                            : "<VPC_ID>",
+    "instance_types"                    : ["<INSTANCE_TYPE>"],
+    "eks_min_instances"                 : 1,
+    "eks_max_instances"                 : 3,
+    "create_iam_role"                   : false,
+    "cluster_iam_role"                  : "<EKS_CLUSTER_ROLE_ARN",
+    "node_iam_role"                     : "<EKS_NODE_GROUP_ROLE_ARN",
+    "cluster_endpoint_public_access"    : false,
+    "cluster_endpoint_private_access"   : true,
+    "bastion_cidr"                      : "<BASTION_CIDR>",
+    "bastion_sg_id"                     : "<BASTION_SECURITY_GROUP",
+    "cluster_security_group_name"       : "<CLUSTER_SECURITY_GROUP>"
+}

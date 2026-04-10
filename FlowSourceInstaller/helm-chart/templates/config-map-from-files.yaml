@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: all-configuration-yamls
+  namespace: {{ .Values.global.namespace }}
+data:
+{{- range $files := .Values.allconfigurations.files }}
+{{ $files.name | indent 2 -}}: |-
+{{ $files.content | indent 4 -}}
+{{ end }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-yaml
+  namespace: {{ .Values.global.namespace }}
+data:
+  app-config.yaml: |-
+{{ .Values.appconfig | indent 4 }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chatbot-jsons
+  namespace: {{ .Values.global.namespace }}
+data:
+{{ ( $.Files.Glob "chatbot/*").AsConfig | indent 2 }}
+
+---
+
+{{- if .Values.cacerts }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ca-certs-yaml
+  namespace: {{ .Values.global.namespace }}
+data:
+{{- range $files := .Values.cacerts.files }}
+{{ $files.name | indent 2 -}}: |-
+{{ $files.content | indent 4 -}}
+{{ end }}
+{{ end }}
+
+---

@@ -1,0 +1,183 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: gcp-cd-pipeline-template
+  title: GCP CD pipeline
+  description: Create a GCP CD Pipeline for a project
+  tags:
+    - cd
+spec:
+  owner: group:catalog-admin
+  type: website
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - regionName
+    - projectId
+    - appName            
+    - imageName
+    - namespaceName
+    - natNname 
+    - routerName          
+    - min_count
+    - max_count
+    - clusterName
+    - bucketName
+    - vpc
+    - gke_private_subnet_1
+    - gke_private_subnet_2
+    - gke_public_subnet
+    - workerPoolName
+    - nodePoolName
+    - master_cidr
+    - clusterServiceAccount
+    - deployServiceAccount
+
+    properties:
+      regionName:
+        title: GCP Region
+        type: string
+        description: GCP region in which repository should be created. eg (us-east1)
+      projectId:
+        title: Project Id
+        type: string
+        description: Provide the Project Id for GCP
+      appName:
+        title: App Name
+        type: string
+        description: Provide the app name for Helm chart
+        maxLength: 53
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'                                  
+      imageName:
+        title: Image Name
+        type: string
+        description: Provide the name of image from Google Artifactory Registry Repository
+      namespaceName:
+        title: Namespace Name
+        type: string
+        description: Provide the namespace name
+      natNname:
+        title: NAT Name
+        type: string
+        description: Provide the existing NAT Name
+      routerName:
+        title: Router Name
+        type: string
+        description: Provide the existing Router Name           
+      min_count:
+        title: Min Count
+        type: number
+        description: The minimum number of nodes for the Node Pool
+      max_count:
+        title: Max Count
+        type: number
+        description: The maximum number of nodes for the Node Pool          
+      clusterName:
+        title: Cluster Name
+        type: string
+        description: Provide the GKE Cluster name
+      bucketName:
+        title: Teraform Backend State Storage Bucket
+        type: string
+        description: Provide the name of existing GCP Teraform Backend State Storage Bucket
+      vpc:
+        title: VPC
+        type: string
+        description: Provide the exsisting VPC for the Cluster
+      gke_private_subnet_1:
+        title: GKE Private Subnet 1
+        type: string
+        description: Provide The existing private subnet for the Cluster
+      gke_private_subnet_2:
+        title: GKE Private Subnet 2
+        type: string
+        description: The private subnet for the Cluster
+      gke_public_subnet:
+        title: GKE Public Subnet
+        type: string
+        description: The public subnet for the Cluster
+      workerPoolName:
+        title: Worker Pool Name
+        type: string
+        description:  Provide the exisisting worker pool to handle build tasks.
+      nodePoolName:
+        title: Node Pool Name
+        type: string
+        description: Identifier for the group of nodes within a GKE cluster. All nodes in the pool share the same configuration, allowing them to be managed and scaled as a single entity.
+      master_cidr:
+        title: Master CIDR
+        type: string
+        description: Provide the CIDR range for the GKE Cluster master nodes. This should be a valid IPv4 range.
+      clusterServiceAccount:
+          title: Service Account for creating cluster
+          type: string
+          description: Provide the exisisting Service Account for creating cluster
+      deployServiceAccount:
+          title: Service Account for deploying App
+          type: string
+          description: Provide the exisisting Service Account for Deploying APP in Cluster
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+  - title: Choose a location
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        regionName: ${{ parameters.regionName }}
+        projectId: ${{ parameters.projectId }}
+        appName: ${{ parameters.appName }}
+        imageName: ${{parameters.imageName}}
+        namespaceName: ${{parameters.namespaceName}}
+        natNname: ${{parameters.natNname}}
+        routerName: ${{parameters.routerName}}
+        min_count: ${{parameters.min_count}}
+        max_count: ${{parameters.max_count}}
+        clusterName: ${{parameters.clusterName}}
+        bucketName: ${{parameters.bucketName}}
+        vpc: ${{parameters.vpc}}
+        gke_private_subnet_1: ${{parameters.gke_private_subnet_1}}
+        gke_private_subnet_2: ${{parameters.gke_private_subnet_2}}
+        gke_public_subnet: ${{parameters.gke_public_subnet}}
+        workerPoolName: ${{parameters.workerPoolName}}
+        nodePoolName: ${{parameters.nodePoolName}}
+        master_cidr: ${{parameters.master_cidr}}
+        clusterServiceAccount: ${{ parameters.clusterServiceAccount }}
+        deployServiceAccount: ${{ parameters.deployServiceAccount }}
+        http_port: 8080
+
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.component_id }}
+      repoUrl: ${{ parameters.repoUrl }}
+
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

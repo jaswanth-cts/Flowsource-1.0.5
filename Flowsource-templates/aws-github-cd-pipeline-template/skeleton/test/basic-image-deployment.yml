@@ -1,0 +1,41 @@
+replicaCount: 1
+
+image:
+  name: <IMAGE_URL>
+  imagePullPolicy: Always
+  tag: latest
+
+namespace: terratest
+
+service:
+  portName: http
+  port: 80
+  protocol: TCP
+  targetPort: http
+  type: LoadBalancer
+  annotations:
+    awsLoadBalancerSubnets: "<SUBNET_IDS>"
+    awsLoadBalancerInternal: "true"
+
+deploymentName: basic-image-deployment
+
+appName: basic-image
+
+container:
+  portName: http
+  containerPort: 8081
+  protocol: TCP
+
+labels:
+  name:
+  releaseName: basic-image-release
+
+serviceAccount:
+  # Specifies whether a Service Account should be created
+  create: false
+  # Annotations to add to the Service Account
+  annotations:
+   eks.amazonaws.com/role-arn: <SERVICE_ACCOUNT_ROLE_ARN>
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "flowsource-demo-app-sa"

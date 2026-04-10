@@ -1,0 +1,251 @@
+AllowBedrockInvokeModelInferenceProfile
+===================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:inference-profile/us.amazon.nova-pro-v1:0",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:inference-profile/us.anthropic.claude-3-opus-20240229-v1:0"
+            ]
+        }
+    ]
+}
+=======================================
+AllowBedrockInvokeModelWithResponseStreamV2
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": "arn:aws:bedrock:<AWS_REGION>::foundation-model/*"
+        }
+    ]
+}
+==============================================
+AWSLambdaBasicExecutionRole
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+==============================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AWSLambdaVPCAccessExecutionPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeSubnets",
+                "ec2:DeleteNetworkInterface",
+                "ec2:AssignPrivateIpAddresses",
+                "ec2:UnassignPrivateIpAddresses"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+================================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "bedrock:InvokeAgent",
+            "Resource": "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:agent-alias/*"
+        }
+    ]
+}
+===============================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "bedrock:InvokeModel",
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>::foundation-model/*",
+                "arn:aws:bedrock:us-west-2::foundation-model/*"
+            ]
+        }
+    ]
+}
+=====================================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "execute-api:*",
+                "apigateway:*"
+            ],
+            "Resource": [
+                "arn:aws:execute-api:<AWS_REGION>:<ACCOUNT_ID>:nn12mb5ul8/*/*/pdlctest3",
+                "arn:aws:apigateway:<AWS_REGION>::/apis/nn12mb5ul8",
+                "arn:aws:apigateway:<AWS_REGION>::/apis"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "apigateway:*",
+            "Resource": [
+                "arn:aws:apigateway:<AWS_REGION>::/apis/nn12mb5ul8",
+                "arn:aws:apigateway:<AWS_REGION>::/apis"
+            ]
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": "apigateway:*",
+            "Resource": "arn:aws:apigateway:<AWS_REGION>::/apis/nn12mb5ul8"
+        },
+        {
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": "apigateway:*",
+            "Resource": "arn:aws:apigateway:<AWS_REGION>::/apis/nn12mb5ul8"
+        }
+    ]
+}
+=================================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:ApplyGuardrail",
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:guardrail/3rx2u7vu5dq5",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:guardrail/cghawb5y9m17",
+                "arn:aws:bedrock:<AWS_REGION>:<ACCOUNT_ID>:guardrail/atzdu44yxcqk"
+            ]
+        }
+    ]
+}
+=========================================================
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:DescribeContributorInsights",
+                "dynamodb:ListTagsOfResource",
+                "dynamodb:CreateTableReplica",
+                "dynamodb:UpdateContributorInsights",
+                "dynamodb:UpdateGlobalTable",
+                "dynamodb:CreateBackup",
+                "dynamodb:UpdateContinuousBackups",
+                "dynamodb:PartiQLSelect",
+                "dynamodb:DescribeTable",
+                "dynamodb:PartiQLInsert",
+                "dynamodb:GetItem",
+                "dynamodb:DescribeContinuousBackups",
+                "dynamodb:UpdateGlobalTableVersion",
+                "dynamodb:CreateGlobalTable",
+                "dynamodb:GetResourcePolicy",
+                "dynamodb:ImportTable",
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:ConditionCheckItem",
+                "dynamodb:PutItem",
+                "dynamodb:PartiQLUpdate",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:UpdateItem",
+                "dynamodb:DescribeTimeToLive",
+                "dynamodb:CreateTable",
+                "dynamodb:UpdateGlobalTableSettings",
+                "dynamodb:UpdateTable",
+                "dynamodb:PartiQLDelete",
+                "dynamodb:DescribeTableReplicaAutoScaling"
+            ],
+            "Resource": "arn:aws:dynamodb:<AWS_REGION>:<ACCOUNT_ID>:table/*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:DescribeImport",
+                "dynamodb:DescribeContributorInsights",
+                "dynamodb:Scan",
+                "dynamodb:UpdateContributorInsights",
+                "dynamodb:Query",
+                "dynamodb:DescribeStream",
+                "dynamodb:UpdateGlobalTable",
+                "dynamodb:UpdateGlobalTableSettings",
+                "dynamodb:DescribeGlobalTableSettings",
+                "dynamodb:PartiQLSelect",
+                "dynamodb:GetShardIterator",
+                "dynamodb:DescribeGlobalTable",
+                "dynamodb:UpdateGlobalTableVersion",
+                "dynamodb:DescribeExport",
+                "dynamodb:CreateGlobalTable",
+                "dynamodb:GetResourcePolicy",
+                "dynamodb:GetRecords"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:<AWS_REGION>:<ACCOUNT_ID>:table/*/stream/*",
+                "arn:aws:dynamodb:<AWS_REGION>:<ACCOUNT_ID>:table/*/export/*",
+                "arn:aws:dynamodb::<ACCOUNT_ID>:global-table/*",
+                "arn:aws:dynamodb:<AWS_REGION>:<ACCOUNT_ID>:table/*/index/*",
+                "arn:aws:dynamodb:<AWS_REGION>:<ACCOUNT_ID>:table/*/import/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:ListContributorInsights",
+                "dynamodb:DescribeReservedCapacityOfferings",
+                "dynamodb:ListGlobalTables",
+                "dynamodb:ListTables",
+                "dynamodb:DescribeReservedCapacity",
+                "dynamodb:ListBackups",
+                "dynamodb:GetAbacStatus",
+                "dynamodb:ListImports",
+                "dynamodb:DescribeLimits",
+                "dynamodb:DescribeEndpoints",
+                "dynamodb:ListExports",
+                "dynamodb:ListStreams"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+========================================

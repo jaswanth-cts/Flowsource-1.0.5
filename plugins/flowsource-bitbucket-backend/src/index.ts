@@ -1,0 +1,1 @@
+export { flowsourceBitBucketBackendPlugin as default } from './plugin'

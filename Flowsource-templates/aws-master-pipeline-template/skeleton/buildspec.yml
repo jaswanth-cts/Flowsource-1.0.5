@@ -1,0 +1,88 @@
+version: 0.2
+
+env:
+  variables:
+    REGION: $REGION
+    PIPELINE_NAME: $PIPELINE_NAME
+    PROJECT_NAME: $PROJECT_NAME
+    REPOSITORY_NAME: $REPOSITORY_NAME
+    BRANCH_NAME: $BRANCH_NAME
+    BUILDSPEC: $BUILDSPEC
+    IMAGE: "aws/codebuild/standard:7.0"
+    BUILD_TIMEOUT: "60"
+    CODEBUILD_SERVICE_ROLE_ARN: "${{values.codebuild_service_role_arn}}"
+    CODEPIPELINE_SERVICE_ROLE_ARN: "${{values.codebuild_service_role_arn}}"
+    S3_BUCKET: "${{values.s3_bucket}}"
+    USE_VPC: $USE_VPC
+    VPC_ID: $VPC_ID
+    SUBNET1: $SUBNET1
+    SUBNET2: $SUBNET2
+    SECURITY_GROUP_ID: $SECURITY_GROUP_ID
+    ECR_REPO_NAME: $ECR_REPO_NAME
+
+phases:
+  install:
+    commands:
+      # Installing Terraform
+      - echo Installing Terraform...
+      - curl -o terraform.zip https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+      - unzip terraform.zip
+      - mv terraform /usr/local/bin/
+      - terraform --version
+      # Installing GetText
+      - echo Installing gettext for envsubst
+      - apt-get update && apt-get install -y gettext
+      # Installing AWS CLI
+      - apt-get update && apt-get install -y git python3 python3-pip
+      - echo Installing AWS CLI
+      - pip install awscli
+      # AWS IAM Authenticator
+      - echo Configuring AWS IAM Authenticator
+      - curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
+      - chmod +x ./aws-iam-authenticator
+      - mkdir -p $HOME/bin && cp ./aws-iam-authenticator $HOME/bin/aws-iam-authenticator && export PATH=$PATH:$HOME/bin
+
+  pre_build:
+    commands:
+      - echo Initializing Terraform
+      - cd ./pipeline-terraform
+      - terraform init
+
+  build:
+    commands:
+      - echo Creating terraform.tfvars Template
+      - echo 'region = "${REGION}"' > terraform.tfvars.template
+      - echo 'project_name = "${PROJECT_NAME}"' >> terraform.tfvars.template
+      - echo 'build_timeout = "${BUILD_TIMEOUT}"' >> terraform.tfvars.template
+      - echo 'buildspec = "${BUILDSPEC}"' >> terraform.tfvars.template
+      - echo 'image = "${IMAGE}"' >> terraform.tfvars.template
+      - echo 'codebuild_service_role_arn = "${CODEBUILD_SERVICE_ROLE_ARN}"' >> terraform.tfvars.template
+      - echo 'codepipeline_service_role_arn = "${CODEPIPELINE_SERVICE_ROLE_ARN}"' >> terraform.tfvars.template
+      - echo 'pipeline_name = "${PIPELINE_NAME}"' >> terraform.tfvars.template
+      - echo 's3_bucket = "${S3_BUCKET}"' >> terraform.tfvars.template
+      - echo 'repository_name = "${REPOSITORY_NAME}"' >> terraform.tfvars.template
+      - echo 'branch_name = "${BRANCH_NAME}"' >> terraform.tfvars.template
+      - echo 'build_project_name = "${BUILD_PROJECT_NAME}"' >> terraform.tfvars.template
+      - echo 'use_vpc = "${USE_VPC}"' >> terraform.tfvars.template
+      - echo 'vpc_config = {' >> terraform.tfvars.template
+      - echo '  vpc_id = "${VPC_ID}"' >> terraform.tfvars.template
+      - echo '  subnets = ["${SUBNET1}", "${SUBNET2}"]' >> terraform.tfvars.template
+      - echo '  security_group_ids = ["${SECURITY_GROUP_ID}"]' >> terraform.tfvars.template
+      - echo '}' >> terraform.tfvars.template
+      - echo 'ecr_repo_name = "$ECR_REPO_NAME"' >> terraform.tfvars.template
+      - echo Substituting environment variables into terraform.tfvars
+      - envsubst < terraform.tfvars.template > terraform.tfvars
+      - echo Running Terraform plan
+      - terraform plan -var-file="terraform.tfvars"
+
+  post_build:
+    commands:
+      # Get AWS Credential using STS Assume Role for kubectl
+      - echo "Setting Environment Variables related to AWS CLI"
+      - CREDENTIALS=$(aws sts assume-role --role-arn $CODEBUILD_SERVICE_ROLE_ARN --role-session-name eks-codebuild --duration-seconds 900)
+      - export AWS_ACCESS_KEY_ID="$(echo ${CREDENTIALS} | jq -r '.Credentials.AccessKeyId')"
+      - export AWS_SECRET_ACCESS_KEY="$(echo ${CREDENTIALS} | jq -r '.Credentials.SecretAccessKey')"
+      - export AWS_SESSION_TOKEN="$(echo ${CREDENTIALS} | jq -r '.Credentials.SessionToken')"
+      - export AWS_EXPIRATION=$(echo ${CREDENTIALS} | jq -r '.Credentials.Expiration')
+      - echo Applying Terraform changes
+      - terraform apply -auto-approve -var-file="terraform.tfvars"  

@@ -1,0 +1,20 @@
+# Terraform state files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+!terraform.example.tfvars
+
+# Sensitive config files (keep examples, not actuals)
+cicd/config/dev/
+cicd/config/qa/
+cicd/config/prod/
+
+# Build artifacts
+imageDetail.json
+tfplan*.out
+
+# Logs
+logs/
+*.log

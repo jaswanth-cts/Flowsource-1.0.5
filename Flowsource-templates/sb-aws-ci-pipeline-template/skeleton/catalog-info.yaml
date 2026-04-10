@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{values.name | dump}}
+  {%- if values.description %}
+  description: ${{values.description | dump}}
+  {%- endif %}
+  annotations:
+    flowsource/aws-repo-name: ${{values.repo_name}}
+    backstage.io/techdocs-ref: dir:.
+    flowsource/aws-pipelines: ${{values.repo_name}}-pipeline, test-alm-demo-flowsource-sb-cd-pipeline
+    flowsource/aws-project-name: ${{values.repo_name}}-build-project
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:catalog-admin

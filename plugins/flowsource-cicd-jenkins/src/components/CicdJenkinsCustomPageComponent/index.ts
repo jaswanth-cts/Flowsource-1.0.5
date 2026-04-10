@@ -1,0 +1,1 @@
+export { CicdJenkinsCustomPageComponent } from './CicdJenkinsCustomPageComponent';

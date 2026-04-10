@@ -1,0 +1,15 @@
+trigger:
+  branches:
+    include:
+    - master
+  paths:
+    include:
+    - environments/prod
+    - Charts
+    - modules
+
+extends:
+  template: pipeline-templates/pipeline-shared.yaml
+  parameters:
+    environment: prod
+    variablegroup: 'cd-pipeline-variablegroup'

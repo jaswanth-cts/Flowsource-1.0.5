@@ -1,0 +1,149 @@
+version: 0.2
+
+# ============================================================
+# FlowSource - Build Pipeline
+# Builds the Docker image from the Dockerfile in configuration/
+# and pushes it to Amazon ECR.
+# Version is read from FlowSourceInstaller/version/version.txt
+# References:
+#   - configuration/Dockerfile
+#   - FlowSourceInstaller/version/version.txt
+# ============================================================
+
+env:
+  variables:
+    AWS_REGION: ""                 # Populated via pipeline environment variable
+    ECR_REPO_NAME: ""              # Populated via pipeline environment variable (e.g., flowsource)
+    TF_STATE_BUCKET: ""            # S3 bucket used for pipeline artifacts
+    DOCKER_BUILD_CONTEXT: "."      # Root of the repo is the Docker build context
+    DOCKERFILE_PATH: "configuration/Dockerfile"
+    VERSION_FILE: "FlowSourceInstaller/version/version.txt"
+
+phases:
+  install:
+    commands:
+      - echo "=== Build server type = ${BUILD_SERVER_TYPE} ==="
+      - |
+        if [ "${BUILD_SERVER_TYPE}" = "ubuntu" ]; then
+          echo "=== Ubuntu: installing Docker, jq, Node 20, pip, nginx ==="
+          apt-get update
+          apt-get install -y docker.io jq python3-pip nginx
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm install 20
+          nvm use 20
+        else
+          echo "=== Amazon Linux 2023: Docker, jq, Node 20, pip pre-installed ==="
+        fi
+      - node --version
+      - echo "=== Installing yarn ==="
+      - npm i -g yarn
+      - yarn --version
+      - echo "=== Installing MkDocs and TechDocs ==="
+      - pip3 install cookiecutter mkdocs mkdocs-techdocs-core
+
+  pre_build:
+    commands:
+      - echo "=== Reading version from ${VERSION_FILE} ==="
+      - IMAGE_TAG=$(cat ${VERSION_FILE} | sed 's/.*flowsource://g' | tr -d '[:space:]')
+      - echo "Image tag resolved to ${IMAGE_TAG}"
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - ECR_IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO_NAME}:${IMAGE_TAG}"
+      - ECR_IMAGE_LATEST="${ECR_REGISTRY}/${ECR_REPO_NAME}:latest"
+      - echo "IMAGE_TAG=${IMAGE_TAG}" > /tmp/build-env.sh
+      - echo "ECR_REGISTRY=${ECR_REGISTRY}" >> /tmp/build-env.sh
+      - echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}" >> /tmp/build-env.sh
+      - echo "ECR_IMAGE_LATEST=${ECR_IMAGE_LATEST}" >> /tmp/build-env.sh
+      - |
+        if [ "${SKIP_BUILD}" = "true" ]; then
+          echo "=== SKIP_BUILD=true: Reusing last built image, skipping Docker build ==="
+          aws s3 cp s3://${TF_STATE_BUCKET}/cicd-artifacts/imageDetail.json ./imageDetail.json
+          echo "Reusing image from last successful build:"
+          cat imageDetail.json
+          exit 0
+        fi
+      - echo "=== Logging in to Amazon ECR ==="
+      - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+      - echo "ECR login successful"
+      - echo "Will push image to ${ECR_IMAGE_URI}"
+
+  build:
+    commands:
+      - . /tmp/build-env.sh
+      - echo "=== Scaffolding Backstage app ==="
+      - |
+        if [ "${BUILD_SERVER_TYPE}" = "ubuntu" ]; then
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 20
+        fi
+        echo "backstage" | npx @backstage/create-app@0.6.2 --path ./ --skip-install
+      - echo "=== Swapping packages directories ==="
+      - mv packages packages-bkp
+      - mv packages-core packages
+      - echo "=== Patching noUnusedLocals in all tsconfigs ==="
+      - |
+        find . -name "tsconfig.json" -not -path "*/node_modules/*" | while read f; do
+          node -e "
+            const fs = require('fs');
+            const c = JSON.parse(fs.readFileSync('$f', 'utf8'));
+            if (c.compilerOptions) { c.compilerOptions.noUnusedLocals = false; }
+            fs.writeFileSync('$f', JSON.stringify(c, null, 2));
+          "
+        done
+      - echo "=== Copying configuration files to repo root ==="
+      - |
+        cd configuration
+        cp -r .dockerignore ..
+        cp -r .gitignore ..
+        cp -r .yarn ..
+        cp -r .yarnrc.yml ..
+        cp -r Dockerfile ..
+        cp -r app-config.yaml ..
+        cp -r package.json ..
+        cp -r yarn.lock ..
+        cd ..
+      - echo "=== Copying FlowSource plugins to repo root ==="
+      - cp -r ${CODEBUILD_SRC_DIR}/Flowsource-templates/flowsource-pdlc/skeleton/flowsource-pdlc-backend ${CODEBUILD_SRC_DIR}/plugins/
+      - cp -r ${CODEBUILD_SRC_DIR}/Flowsource-templates/flowsource-pdlc/skeleton/flowsource-pdlc ${CODEBUILD_SRC_DIR}/plugins/
+      - echo "=== Building Docker image ==="
+      - echo "Build started on $(date)"
+      - |
+        docker build \
+          -t ${ECR_REPO_NAME}:${IMAGE_TAG} \
+          -f ${DOCKERFILE_PATH} \
+          --build-arg NODE_ENV=production \
+          ${DOCKER_BUILD_CONTEXT}
+      - echo "Docker build completed successfully"
+      - echo "=== Tagging image for ECR ==="
+      - docker tag ${ECR_REPO_NAME}:${IMAGE_TAG} ${ECR_IMAGE_URI}
+      - docker tag ${ECR_REPO_NAME}:${IMAGE_TAG} ${ECR_IMAGE_LATEST}
+
+  post_build:
+    commands:
+      - . /tmp/build-env.sh
+      - echo "=== Pushing image to ECR ==="
+      - docker push ${ECR_IMAGE_URI}
+      - docker push ${ECR_IMAGE_LATEST}
+      - echo "Image pushed ${ECR_IMAGE_URI}"
+      - echo "=== Writing image metadata artifact ==="
+      - |
+        cat > imageDetail.json <<EOF
+        {
+          "imageUri": "${ECR_IMAGE_URI}",
+          "imageTag": "${IMAGE_TAG}",
+          "ecrRegistry": "${ECR_REGISTRY}",
+          "ecrRepoName": "${ECR_REPO_NAME}",
+          "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        EOF
+      - cat imageDetail.json
+      - aws s3 cp imageDetail.json s3://${TF_STATE_BUCKET}/cicd-artifacts/imageDetail.json
+      - echo "Build pipeline completed successfully"
+
+artifacts:
+  files:
+    - imageDetail.json
+  discard-paths: yes

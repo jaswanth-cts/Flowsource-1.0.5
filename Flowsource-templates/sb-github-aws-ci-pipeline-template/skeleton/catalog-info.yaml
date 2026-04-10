@@ -1,0 +1,51 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{values.component_id | dump}}
+  appid: ${{values.component_id}}
+  {%- if values.description %}
+  description: ${{values.description | dump}}
+  {%- endif %}
+  annotations:
+    github.com/project-slug: ${{values.destination.owner + "/" + values.destination.repo}}
+    backstage.io/techdocs-ref: dir:.
+    # Add the following annotation to the component to enable the AWS CI/CD plugin
+    flowsource/aws-pipelines: ${{values.pipelineName}}
+    flowsource/aws-repo-name: ${{values.repo_name}}
+    flowsource/aws-region: ${{values.aws_code_region}}
+    flowsource/durationInDays: '60'
+    flowsource/aws-project-name: ${{values.projectName}}
+    # Add the following annotation to the component to enable the Code Quality plugin
+    flowsource/sonarqube-project-key: ${{values.sonarProjectKey}} 
+    # Add the following annotation to the component to enable the Github PR plugin 
+    flowsource/github-repo-owner: ${{values.destination.owner}}
+    flowsource/github-repo-name: ${{values.repo_name}}
+    # Add the following annotation to the component to enable the Checkmarx plugin
+    flowsource/checkmarx-project-id: ${{values.checkmarxProjectName}}
+    # Add the following annotation to the component to enable the Blackduck plugin
+    flowsource/blackduck-project-id: ${{values.blackduckProjectName}}
+    # Kubernetes plugin 
+    'backstage.io/kubernetes-namespace': ${{values.namespace}}
+    'backstage.io/kubernetes-label-selector': 'app=${{values.appName}}'
+spec:
+  providesApis:
+    - ${{values.component_id}}-api
+  type: service
+  lifecycle: experimental
+  owner: ${{values.owner | dump}}
+
+# ---
+# apiVersion: backstage.io/v1alpha1
+# kind: API
+# metadata:
+#   name: ${{values.component_id}}-api
+#   description: Get ${{values.component_id}} details
+#   tags:
+#     - java
+#     - springboot
+# spec:
+#   type: openapi
+#   lifecycle: production
+#   owner: ${{values.owner | dump}}
+#   definition: 
+#     $text: http://${{values.appName}}.${{values.namespace}}.svc.cluster.local/v3/api-docs

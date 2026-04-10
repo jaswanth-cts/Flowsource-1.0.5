@@ -1,0 +1,21 @@
+.container{
+  padding-left: 100px;
+  color: #f4f1f1;
+}
+.loadingIndicator {
+  width: 20px;
+  aspect-ratio: 4;
+  display: inline-block;
+  --_g: no-repeat radial-gradient(circle closest-side,#f4f1f1 90%,#6d6c6c00);
+  background: 
+    var(--_g) 0%   50%,
+    var(--_g) 50%  50%,
+    var(--_g) 90% 50%;
+  background-size: calc(90%/3) 90%;
+  animation: keyframeAnimation 1s infinite linear;
+}
+@keyframes keyframeAnimation {
+    33%{background-size:calc(100%/3) 0%  ,calc(100%/3) 100%,calc(100%/3) 100%}
+    50%{background-size:calc(100%/3) 100%,calc(100%/3) 0%  ,calc(100%/3) 100%}
+    66%{background-size:calc(100%/3) 100%,calc(100%/3) 100%,calc(100%/3) 0%  }
+}

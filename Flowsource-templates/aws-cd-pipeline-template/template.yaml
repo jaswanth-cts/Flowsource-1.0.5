@@ -1,0 +1,151 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: aws-cd-pipeline-template
+  title: AWS CD pipeline
+  description: Create a AWS CD Pipeline for a project
+  tags:
+  - cd
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - repo_name
+    - default_branch
+    - regionName
+    - appName
+    - imageName
+    - namespaceName
+    - clusterName
+    - bucketName
+    - dynamodbTableName
+    - vpc
+    - eks_subnet_1
+    - eks_subnet_2
+    - bastion_id
+    - bastion_ci_dr
+    - min_count
+    - max_count
+    - code_build_arn
+
+    properties:
+      repo_name:
+        title: Repository Name
+        type: string
+        description: Name of the Repository
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Branch name for the repository. eg('main' or 'master')
+      regionName:
+        title: AWS Region
+        type: string
+        description: AWS region in which repository should be created. eg (us-east-1)
+      appName:
+        title: App Name
+        type: string
+        description: Provide the app name for Helm chart
+        maxLength: 53
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      imageName:
+        title: Image Name
+        type: string
+        description: Provide the name of image from Elastic Container Registry
+      namespaceName:
+        title: Namespace Name
+        type: string
+        description: Provide the namespace name
+      clusterName:
+        title: Cluster Name
+        type: string
+        description: Provide the EKS Cluster name
+      bucketName:
+        title: Bucket Name
+        type: string
+        description: Provide the name of existing AWS S3 Bucket
+      dynamodbTableName:
+        title: DynamoDB Table Name
+        type: string
+        description: Provide the name of existing DynamoDB Table
+      min_count:
+        title: Min Count
+        type: number
+        description: The minimum number of nodes for the Node Pool
+      max_count:
+        title: Max Count
+        type: number
+        description: The maximum number of nodes for the Node Pool
+      vpc:
+        title: VPC
+        type: string
+        description: The VPC for the Cluster
+      eks_subnet_1:
+        title: EKS Subnet 1
+        type: string
+        description: The subnet for the Cluster
+      eks_subnet_2:
+        title: EKS Subnet 2
+        type: string
+        description: The subnet for the Cluster
+      bastion_id:
+        title: Bastion ID
+        type: string
+        description: The Security Group Id of Bastion host
+      bastion_ci_dr:
+        title: Bastion CI DR
+        type: string
+        description: The CIDR block for the Bastion
+      code_build_arn:
+        title: Code Build ARN
+        type: string
+        description: The Code Build ARN for the Cloud Build Project
+      role_arn:
+        title: EKS Role ARN
+        type: string
+        description: The role ARN for the Cluster
+      
+
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      values:
+        repo_name: ${{ parameters.repo_name }}
+        default_branch: ${{ parameters.default_branch }}
+        regionName: ${{ parameters.regionName }}
+        imageName: ${{parameters.imageName}}
+        namespaceName: ${{parameters.namespaceName}}
+        appName: ${{parameters.appName}}
+        clusterName: ${{parameters.clusterName}}
+        bucketName: ${{parameters.bucketName}}
+        dynamodbTableName: ${{parameters.dynamodbTableName}}
+        vpc: ${{parameters.vpc}}
+        eks_subnet_1: ${{parameters.eks_subnet_1}}
+        eks_subnet_2: ${{parameters.eks_subnet_2}}
+        bastion_id: ${{parameters.bastion_id}}
+        bastion_ci_dr: ${{parameters.bastion_ci_dr}}
+        role_arn: ${{parameters.role_arn}}
+        code_build_arn: ${{parameters.code_build_arn}}
+        min_count: ${{ parameters.min_count }}
+        max_count: ${{ parameters.max_count }}
+        http_port: 8080
+
+  - id: publish
+    name: Publish
+    action: aws:codecommit:publish
+    input:
+      repositoryName: ${{parameters.repo_name}}
+      defaultBranch: ${{parameters.default_branch}}
+  
+  output:
+    links:
+    - title: Repository
+      url: https://${{parameters.regionName}}.console.aws.amazon.com/codesuite/codecommit/repositories/${{parameters.repo_name}}/browse/refs/heads/${{parameters.default_branch}}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

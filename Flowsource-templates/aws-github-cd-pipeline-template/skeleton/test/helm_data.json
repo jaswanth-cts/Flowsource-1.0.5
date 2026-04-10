@@ -1,0 +1,10 @@
+{
+    "region"            : "<AWS_REGION>",
+    "cluster_name"      : "<CLUSTER_NAME>",
+    "chart"             : "../../Charts",
+    "deploymentname"    : "terratest-deployment",
+    "chartversion"      : "1.29",
+    "values-files"      : ["../../test/basic-image-deployment.yml"],
+    "namespace"         : "terratest",
+    "create_namespace"  : true
+}

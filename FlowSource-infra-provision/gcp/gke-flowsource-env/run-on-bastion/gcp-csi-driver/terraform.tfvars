@@ -1,0 +1,13 @@
+project_id              = "cog01hy0xaqm3kfh4mr4t3em9ex2m"
+region                  = "us-east1"
+gke_cluster_name        = "flowsource-gke-cluster"
+namespace               = "kube-system"
+create_namespace        = false
+csi_deploymentname      = "csi-secrets-store"
+gcp_csi_deploymentname  = "secrets-store-csi-driver-provider-gcp"
+csi_chart               = "secrets-store-csi-driver"
+gcp_csi_chart           = "secrets-store-csi-driver-provider-gcp-charts"
+csi_chartversion        = "1.4.4"
+gcp_csi_chartversion    = "1.5.0"
+csi_chartrepository     = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
+csi-drivers-values-file = "secrets_store_csi_values.yaml"

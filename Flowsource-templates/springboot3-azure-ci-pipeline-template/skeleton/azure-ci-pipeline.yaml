@@ -1,0 +1,166 @@
+trigger:
+  branches:
+    include:
+    - master
+pool:
+  vmImage: 'ubuntu-latest'
+  # In case need to use Self hosted agent then uncomment the line below
+  # name: SelfHostedAgentPool
+variables:
+- group: ci-pipeline-variable-group # Reference the variable group here
+- name: sonartoken
+  value: $[variables.SONAR_TOKEN]
+- name: SONAR_PROJECT
+  value: ${{values.sonarProjectKey}}
+- name: CHECKMARX_PASSWORD
+  value: $[variables.CHECKMARX_TOKEN]
+- name: CX_PROJECT
+  value: ${{values.checkmarxProjectName}}
+- name: BDH_TOKEN
+  value: $[variables.BLACKDUCK_TOKEN]
+- name: BDH_PROJECT
+  value: ${{values.blackduckProjectName}}
+- name: tag
+  value: 'latest'
+- name: imageRepository
+  value: '${{values.artifact_id}}'
+- name: dockerfile
+  value: '$(Build.SourcesDirectory)/Dockerfile'
+- name: dockerpassword
+  value: $[variables.DOCKER_PASSWORD]
+
+stages:
+- stage: 'PreBuildScans'
+  jobs:
+  - job: PreBuildScan
+    displayName: 'Run SonarQube, Blackduck and Checkmarx Scans'
+    steps:
+    - task: JavaToolInstaller@0
+      inputs:
+        versionSpec: '17'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+    - bash: |
+        set -e
+        echo "******** RUNNING CHECKMARX SCAN ***********"
+        sudo mkdir -p /usr/local/bin/checkmarx-cli
+         # Download cxconsoleplugin
+        sudo curl -o /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -L https://download.checkmarx.com/9.5.0/Plugins/CxConsolePlugin-1.1.30.zip
+        sudo unzip -o /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -d /usr/local/bin/checkmarx-cli/
+        sudo chmod +x /usr/local/bin/checkmarx-cli/runCxConsole.sh
+
+        sourceLocation=$(pwd)
+         # Run Checkmarx scan
+        sudo /usr/local/bin/checkmarx-cli/runCxConsole.sh Scan -v \
+          -CxServer "$CHECKMARX_BASE_URL" \
+          -CxUser "$CHECKMARX_USERNAME" \
+          -CxPassword "$Checkmarx_Pswd" \
+          -ProjectName "/$CX_PROJECT" \
+          -LocationType 'folder' \
+          -LocationPath "$sourceLocation"/ \
+          -preset 'Cognizant Default Preset' \
+          -SASTHigh 1 \
+          -SASTMedium 1 \
+          -ReportPDF "$sourceLocation"/CheckmarxSanReport.pdf \
+      displayName: 'Checkmarx Scan'
+      env:
+        Checkmarx_Pswd: $(CHECKMARX_PASSWORD)
+
+    - bash: |
+        set -e
+        echo "****** Running Blackduck Scan *************"
+        echo "BDH_PROJECT is $BDH_PROJECT"
+
+        bash <(curl -s -L $BLACKDUCK_DETECT_URL) \
+          --blackduck.url=$BLACKDUCK_URL \
+          --blackduck.api.token=$Bdh_Passwd \
+          --detect.project.name="$BDH_PROJECT" \
+          --detect.project.version.name="ver.1" \
+          --blackduck.trust.cert=true \
+          --detect.timeout=3600 \
+          --detect.detector.search.depth=0 \
+          --detect.tools=ALL,IAC_SCAN \
+          --detect.blackduck.signature.scanner.individual.file.matching=ALL \
+          --detect.detector.search.continue=true \
+          --logging.level.com.synopsys.integration=DEBUG \
+          --detect.risk.report.pdf=true \
+          --detect.risk.report.pdf.path="report" \
+          --detect.blackduck.signature.scanner.snippet.matching=SNIPPET_MATCHING \
+          --detect.excluded.directories=.git
+            
+      displayName: 'Blackduck Scan'
+      env:
+        Bdh_Passwd: $(BDH_TOKEN)    
+
+    - bash: |
+        set -e
+        echo "****** Running Sonar Scan *************"
+        echo "Sonar Project is $(SONAR_PROJECT)"
+        echo "Sonar URL is $SONAR_URL"
+
+        mvn clean verify sonar:sonar \
+        -Dsonar.projectKey=$(SONAR_PROJECT) \
+        -Dsonar.host.url=$SONAR_URL \
+        -Dsonar.login=$Sonar_Passwd \
+        -Dsonar.java.binaries=target/classes
+
+        curl -u "$Sonar_Passwd:" "$SONAR_URL/api/qualitygates/project_status?projectKey=$(SONAR_PROJECT)"
+
+      displayName: 'Sonar Scan'
+      env:
+        Sonar_Passwd: $(sonartoken)
+
+- stage: Build
+  jobs:
+  - job: MavenBuild
+    displayName: 'Build and package'
+    steps:
+    - task: Maven@4
+      inputs:
+        mavenPOMFile: 'pom.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: 'jdkVersion'
+        jdkVersion: '17'
+        publishJUnitResults: true
+        testResultsFiles: '**/TEST-*.xml'
+        goals: 'clean package'
+      displayName: 'Maven build'
+
+    - task: CopyFiles@2
+      displayName: 'Copy taget'
+      inputs:
+        contents: 'target/**'
+        targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)/target
+        artifactName: target
+      displayName: Publish target
+
+  - job: DockerBuildAndPush
+    dependsOn: MavenBuild
+    condition: succeeded()
+    displayName: 'Docker Build and Push'
+    steps:
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        artifact: target
+        path: $(Build.SourcesDirectory)/target
+      displayName: Download target
+
+    - bash: |
+        set -e
+        echo "****** Docker build and Push *************"
+        echo "Docker Registry is $DOCKER_REGISTRY"
+        echo "Docker User is $DOCKER_USERNAME"
+        echo "Docker Repository is $(imageRepository)"
+        echo "Tag is $(tag)"
+        docker build -t $DOCKER_REGISTRY/$(imageRepository):$(tag) .
+        echo "Docker Build Successful"
+
+        docker login $DOCKER_REGISTRY -u="$DOCKER_USERNAME" -p=$Docker_Passwd
+        docker push $DOCKER_REGISTRY/$(imageRepository):$(tag)
+      displayName: Build and push an image to container registry
+      env:
+        Docker_Passwd: $(dockerpassword)

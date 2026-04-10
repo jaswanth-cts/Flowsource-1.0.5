@@ -1,0 +1,179 @@
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: springboot-aws-ci-pipeline-using-github-template
+  title: Spring Boot with AWS CI pipeline Using GitHub
+  description: Create a simple Java SpringBoot Application With AWS Code Pipeline Using GitHub.
+  tags:
+  - java
+  - springboot
+  - ci
+  - aws
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - component_id
+    - aws_code_region
+    - default_branch
+    - java_package_name
+    - java_group_id
+    - java_artifact_id
+    - sonarProjectKey
+    - checkmarxProjectName
+    - blackduckProjectName
+    - namespace
+    - appName
+    - owner
+    properties:
+      component_id:
+        title: Name
+        type: string
+        description: Unique name of the component
+        ui:field: EntityNamePicker
+      aws_code_region:
+        title: AWS Region
+        type: string
+        description: AWS region in which repository should be created. eg (us-east-1)
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Branch name for the repository. eg('main' or 'master')
+      java_package_name:
+        title: Java Package Name
+        type: string
+        description: Name for the java package. eg (io.backstage.blah)
+      java_group_id:
+        title: Java Group ID
+        type: string
+        description: Name for the java app Group ID. eg (io.backstage.blah)
+      java_artifact_id:
+        title: Java Artifact ID
+        type: string
+        description: Name for the java app Artifact ID. eg (io.backstage.blah)
+        maxLength: 53
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      description:
+        title: Description
+        type: string
+        description: Help others understand what this website is for.
+      sonarProjectKey:
+        title: Project Key of Sonarqube
+        type: string
+        description: Name of the Sonarqube Project Key
+        ui:autofocus: true
+      checkmarxProjectName:
+        title: Project Name of Checkmarx
+        type: string
+        description: Name of the Project for Checkmarx Scan
+        ui:autofocus: true
+      blackduckProjectName:
+        title: Project Name of BlackDuck
+        type: string
+        description: Name of the Project for BlackDuck Scan
+        ui:autofocus: true
+      namespace:
+        title: Namespace
+        description: Name of the namespace used in Kubernetes deployment
+        type: string
+      appName:
+        title: App Name
+        description: App name used to set the Kubernetes label selector
+        type: string  
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+  - title: Choose a location
+    required:
+    - repoUrl
+    - collaborators
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+      collaborators:
+        title: GitHub Team Collaborators
+        type: string
+        description: Name of the GitHub team to add as collaborators
+        ui:autofocus: true   
+  
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      copyWithoutRender:
+      - .github/workflows/*
+      values:
+        default_branch: ${{ parameters.default_branch }}
+        component_id: ${{ parameters.component_id }}
+        aws_code_region: ${{ parameters.aws_code_region }}
+        description: ${{ parameters.description }}
+        owner: ${{ parameters.owner }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+        artifact_id: ${{ parameters.java_artifact_id }}
+        group_id: ${{ parameters.java_group_id }}
+        java_package_name: ${{ parameters.java_package_name }}
+        java_package_name_slash: ${{ parameters.java_package_name.replaceAll('.', '/') }}
+        sonarProjectKey: ${{ parameters.sonarProjectKey }}
+        checkmarxProjectName: ${{ parameters.checkmarxProjectName }}
+        namespace: ${{ parameters.namespace }}
+        appName: ${{ parameters.appName }}
+        repo_name: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+        pipelineName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-ci-pipeline
+        projectName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-build-project
+        repoUrl: ${{ parameters.repoUrl }}
+        http_port: 8080
+  
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.component_id }}
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.default_branch }}
+      collaborators:
+        - team: ${{ parameters.owner }}/${{ parameters.collaborators }}
+          access: push
+      protectDefaultBranch: false
+
+  - id: apply-pipeline
+    name: Create Aws Pipeline
+    action: aws:pipeline:create-v1
+    input:
+      pipelineName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-ci-pipeline
+      projectName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-build-project
+      repositoryName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+      branchName: ${{ parameters.default_branch }}
+      githubOwner: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+      buildSpec: buildspec-build.yml
+
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+      catalogInfoPath: "/catalog-info.yaml"
+      
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

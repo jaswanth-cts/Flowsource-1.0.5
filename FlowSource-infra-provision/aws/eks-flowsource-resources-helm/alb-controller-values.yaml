@@ -1,0 +1,8 @@
+clusterName: fstestm
+replicaCount: 1
+serviceAccount:
+  name: aws-load-balancer-controller
+  annotations: 
+    eks.amazonaws.com/role-arn: arn:aws:iam::916849114231:role/Role-FS-Skygrade-ALBController
+vpcId: vpc-0b3b3b3b3b3b3b3b3
+region: ap-southeast-1

@@ -1,0 +1,132 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: python-aws-ci-pipeline-using-github-template
+  title: Python With AWS CI pipeline Using Github
+  description: Create a simple Python Application(FastApi,hyx,pytest) with AWS code pipeline using GitHub.
+  tags:
+  - python
+  - ci
+  - aws
+spec:
+  owner: group:catalog-admin
+  type: service
+
+  parameters:
+  - title: Provide some simple information
+    required:
+    - component_id
+    - aws_code_region
+    - default_branch
+    - sonarProjectKey
+    - checkmarxProjectName
+    - blackduckProjectName
+    - owner
+    properties:
+      component_id:
+        title: Name
+        type: string
+        description: Unique name of the component
+        ui:field: EntityNamePicker
+      aws_code_region:
+        title: AWS Region
+        type: string
+        description: AWS region in which repository should be created. eg (us-east-1)
+      default_branch:
+        title: Branch Name
+        type: string
+        description: Branch name for the repository. eg('main' or 'master')
+      description:
+        title: Description
+        type: string
+        description: Help others understand what this website is for.
+      sonarProjectKey:
+        title: Project Key of Sonarqube
+        type: string
+        description: Name of the Sonarqube Project Key
+        ui:autofocus: true
+      checkmarxProjectName:
+        title: Project Name of Checkmarx
+        type: string
+        description: Name of the Project for Checkmarx Scan
+        ui:autofocus: true
+      blackduckProjectName:
+        title: Project Name of Blackduck
+        type: string
+        description: Name of the Project for Blackduck Scan
+        ui:autofocus: true
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+  - title: Choose a location
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
+  
+  steps:
+  - id: template
+    name: Fetch Skeleton + Template
+    action: fetch:template
+    input:
+      url: ./skeleton
+      copyWithoutRender:
+      - .github/workflows/*
+      values:
+        default_branch: ${{ parameters.default_branch }}
+        component_id: ${{ parameters.component_id }}
+        aws_code_region: ${{ parameters.aws_code_region }}
+        description: ${{ parameters.description }}
+        owner: ${{ parameters.owner }}
+        destination: ${{ parameters.repoUrl | parseRepoUrl }}
+        repo_name: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+        sonarProjectKey: ${{ parameters.sonarProjectKey }}
+        checkmarxProjectName: ${{ parameters.checkmarxProjectName }}
+        blackduckProjectName: ${{ parameters.blackduckProjectName }}
+        http_port: 8000
+  
+  - id: publish
+    name: Publish
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      description: This is ${{ parameters.component_id }}
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: ${{ parameters.default_branch }}
+
+  - id: apply-pipeline
+    name: Create Aws Pipeline
+    action: aws:pipeline:create-v1
+    input:
+      pipelineName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-pipeline
+      projectName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}-build-project
+      repositoryName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+      branchName: ${{ parameters.default_branch }}
+      githubOwner: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+      buildSpec: buildspec-build.yml
+
+  - id: register
+    name: Register
+    action: catalog:register
+    input:
+      repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+      catalogInfoPath: "/catalog-info.yaml"
+      
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps.publish.output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps.register.output.entityRef }}

@@ -1,0 +1,179 @@
+{
+    "router": {
+        "system_message": "You are the *Router* agent. Given the conversation, decide which specialist agent must answer. Respond ONLY with a JSON object: {\"agent\": <Name>}.",
+        "llm_config_overrides": {
+            "temperature": 0.2,
+            "max_retries": 3
+        }
+    },
+    "agents": [
+        {
+            "name": "UserStoryCreator",
+            "description": "You are the User Story Agent",
+            "system_message": "You are the User Story Agent, an AI assistant specifically designed for Agile development. Generate clear, concise and valuable user stories based on the provided context. Refining user stories: Enhance user stories by adding detailed, testable acceptance criteria (using Given/When/Then format when appropriate), ensuring clarity and completeness."
+,
+            "is_rag_agent": true,
+            "index_name": "pdlc-userstory-docs",
+            "llm_config_overrides": {
+                "temperature": 0.5,
+                "max_tokens": 4000,
+                "max_retries": 3
+
+            }
+        },
+        {
+            "name": "JiraAgent",
+            "description": "You are the Jira Agent that can create, update, or fetch Jira tickets. Follow the below step to answer user question: Step 1 - Invoke relevant Tools. Step 2 - Rewrite the tool result in the proper format. Step3 - Respond user. ",
+            "system_message": "You are a Jira Agent. When activated, always use the appropriate tool to handle the user's Jira-related request. - For create/check-ins, use the latest user story previously generated as the ticket content. - For updates and fetches, follow the user's instructions exactly. - Never fabricate or invent user stories or ticket details. - Return all tool responses as clear, well-structured Markdown. - Do not return raw JSON, API responses, or code.",
+            "is_rag_agent": false,
+            "llm_config_overrides": {
+                "temperature": 0.5,
+                "max_tokens": 2000,
+                "max_retries": 3
+            },
+            "mcp": {
+                "type": "streamable-http",
+                "url": "https://xxxxx.azurecontainerapps.io/mcp",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "timeout": 30
+            }
+        },
+        {
+            "name": "GitHubAgent",
+            "description": "GitHub Agent helps to perform GitHub related actions like retrieve files, check-in and all other github related activities.",
+            "system_message": "GitHubAgent. You are a GitHub agent that manages code commits, branch operations, and file retrievals within a private organization’s repositories. Handle tasks like creating or updating files, pushing code, listing branches, or retrieving file contents. You do not generate or modify code — you only manage repository state and file storage accurately and securely. Always assume restricted access to only authorized repositories.",
+            "is_rag_agent": false,
+            "llm_config_overrides": {
+                "temperature": 0.5,
+                "max_tokens": 4000,
+                "max_retries": 3
+            },
+            "mcp": {
+                "type": "sse",
+                "url": "https://xxxxx.azurecontainerapps.io/sse",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "timeout": 30
+            }
+        },
+        {
+            "name": "UserStoryQualityCheck",
+            "description": "Evaluates a user story against INVEST and suggests improvements.",
+            "system_message": "ACTION: Extract the user story details from the history or from user question. Assess the provided User Story for quality based on the context below, and rate each characteristic from 0 to 10, where 10 represents the highest quality. If a qualitycheck is missing, assign a score of zero. The final output should be presented in a table with the columns: Characteristic, Score, Reasons (if any), and Recommendations (if any).\n\nEvaluation Criteria: Examinethe User Story for the following characteristics:\n\nUser-Centered\nIndependent\nNegotiable\nValuable\nEstimatable\nSmall\nTestable\nAcceptance Criteria\n\nScoring Rules:\n\nIf a characteristic is rated 10, enter 'N/A' for both the Reason and Recommendation fields.\nProvide a reason and a recommendation if the score is less than 10.\nScores should range from 0 to 10.\nIf the score is between 1 and 5, round it up to 5.\nIf the score is between 6 and 7, round it up to 7.\nIf there is no data available for a characteristic, assign a score of 0 and provide both a reason and a recommendation.",
+            "is_rag_agent": false,
+            "llm_config_overrides": {
+                "temperature": 0.7,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "TestCaseCreator",
+            "description": "Produces exhaustive test cases for features or user stories (RAG).",
+            "system_message": "You are *TestCaseCreator* … TERMINATE when done.",
+            "is_rag_agent": true,
+            "index_name": "pdlc-testcase-docs",
+            "llm_config_overrides": {
+                "temperature": 0.2,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "TestScriptGenerator",
+            "description": "Converts test cases into executable scripts (PyTest, Playwright, JUnit, etc.).",
+            "system_message": "You are *TestScriptGenerator* … TERMINATE when done.",
+            "is_rag_agent": false,
+            "llm_config_overrides": {
+                "temperature": 0.7,
+                "max_tokens": 4000
+            }
+        },
+        {
+            "name": "KnowledgeArticleAssistant",
+            "description": "Handles queries related to knowledge base articles.",
+            "system_message": "You are an assistant specialized in providing information from knowledge base articles. Avoid duplicates.",
+            "is_rag_agent": true,
+            "index_name": "pdlc-knowledgebase-docs",
+            "llm_config_overrides": {
+                "temperature": 0.75,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "DeploymentChecklistAssistant",
+            "description": "Provides deployment checklists and related assistance.",
+            "system_message": "You are an assistant that provides deployment checklists and guidance.",
+            "is_rag_agent": true,
+            "index_name": "pdlc-deploymentchecklist-docs",
+            "llm_config_overrides": {
+                "temperature": 0.75,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "ProjectRoadmapAssistant",
+            "description": "Provides information about project roadmaps.",
+            "system_message": "You are an assistant that provides details on project roadmaps.",
+            "is_rag_agent": true,
+            "index_name": "pdlc-projectroadmap-docs",
+            "llm_config_overrides": {
+                "temperature": 0.75,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "StakeholdersContactAssistant",
+            "description": "Provides contact information for stakeholders.",
+            "system_message": "You are an assistant that provides stakeholders contact information.",
+            "is_rag_agent": true,
+            "index_name": "pdlc-stakeholder-docs",
+            "llm_config_overrides": {
+                "temperature": 0.75,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "RegulatoryComplianceAssistant",
+            "description": "Assists with queries related to regulatory compliance.",
+            "system_message": "You are an assistant specialized in regulatory compliance matters.",
+            "is_rag_agent": true,
+            "index_name": "pdlc-regulatorycomplaince-docs",
+            "llm_config_overrides": {
+                "temperature": 0.75,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "ContentRefiner",
+            "description": "This specialized assistant transforms tool-generated content into polished, professional language while maintaining the original information and formatting structure. Ideal for preparing technical outputs, reports, and automated responses for business communications and formal documentation.",
+            "system_message": "This specialized assistant transforms tool-generated content into polished, professional language while maintaining the original information and formatting structure. Ideal for preparing technical outputs, reports, and automated responses for business communications and formal documentation.",
+            "is_rag_agent": false,
+            "llm_config_overrides": {
+                "temperature": 0.7,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        },
+        {
+            "name": "GeneralAssistant",
+            "description": "Fallback assistant for any query not covered by other agents.",
+            "system_message": "You are *GeneralAssistant* …",
+            "is_rag_agent": false,
+            "llm_config_overrides": {
+                "temperature": 0.7,
+                "max_tokens": 4000,
+                "max_retries": 3
+            }
+        }
+    ]
+}
+

@@ -1,0 +1,73 @@
+# Required fields
+
+# AWS region eg. us-east-1, ap-south-1
+region = "region"
+
+vpc_id = "vpc-111"
+eks_subnet_ids = ["subnet-1111", "subnet-2222"]
+cluster-name = "clustername"
+db_subnet_ids = ["subnet-33333", "subnet-44444"]
+db_security_group_ids = ["sg-123456789"]
+
+# Should be valid AWS instance-types as t3.medium, m5.large, etc.
+instance-types = ["type1", "type2"]
+eks-min-instances = 1 
+eks-max-instances = 3
+
+# If pre-created IAM Role is to be used for setting up EKS  and create_iam_role is false, then the ARN of existing IAM role to use, else this will be the prefix for the new role to be created
+cluster_iam_role = "role-clusteriam"
+##cluster_iam_role = "arn:aws:iam::<accountid>:role/<Role Name>" 
+node_iam_role = "role-node"
+
+# Should be valid AWS DB instance-types such as db.m5.large
+postgres-db-instance-class = "db instance type"
+
+postgres-db-name = "dbname"
+postgres-db-identifier-name = "dbserver"
+postgres-db-user = "dbuser"
+postgres-db-password = "Changeit"
+
+postgres-maintenance-window = "Sat:00:00-Sat:03:00"
+postgres-backup-window="22:00-22:30"
+postgres-db-backup-retention-period=2
+postgres-db-multi-az=true
+postgres-skip-final-snapshot=true
+
+# The CIDR of the bastion host which will be used to acess database and EKS. If Security group of the bastion is specified then it will be used as source instead of CIDR for Ingress access
+bastion-cidr = "192.168.0.1/32"
+
+###### Optional fields
+# If not specified the same subnets as the worker nodes will be used for Control Plane. 
+# Recommended to have different subnets for control plane
+cp_subnet_ids = []
+
+# If not specified defaults to version 1.31
+cluster-version = "1.31"
+
+# If not specified defaults to version true
+create_iam_role = false
+
+# AMI id to use (Optional). If not specified default will be used based on region
+ami_id = ""
+
+# Security group of the bastion for accessing EKS and Database. If specified then it will be used as source instead of CIDR for Ingress access
+bastion-sg-id = "sg-05b2fbb0063a27b91"
+
+cluster_endpoint_public_access      = false
+cluster_endpoint_private_access     = true
+cluster_security_group_id           = "sg-1234567"
+create_launch_template              = false
+use_custom_launch_template          = false
+ami_release_version                 = "1.31.4-20250203" 
+use_latest_ami_release_version      = true
+ami_type                            = "AL2023_x86_64_STANDARD"
+ebs_volume_size                     = 100
+
+#RDS Replica properties
+enable_read_replica = true
+# RDS Replica region eg. us-east-1, ap-south-1
+replica_region = "us-east-1"
+# If the RDS Replica region is same as primary region, set the key to ""
+replica_kms_key_arn = "arn:aws:kms:<REPLICA_REGION>:<ACCOUNT_ID>:key/<KEY_ID>"
+replica_db_security_group_ids  = ["sg-1111"]
+replica_db_subnet_ids = ["subnet-11111", "subnet-2222", "subnet-3333"]

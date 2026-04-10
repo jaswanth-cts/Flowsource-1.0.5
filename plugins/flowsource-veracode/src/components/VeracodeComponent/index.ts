@@ -1,0 +1,1 @@
+export { VeracodeComponent } from './VeracodeComponent';

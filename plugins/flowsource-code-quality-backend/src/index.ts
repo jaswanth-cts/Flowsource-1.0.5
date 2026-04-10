@@ -1,0 +1,1 @@
+export { flowsourceCodeQualityBackendPlugin as default } from './plugin'

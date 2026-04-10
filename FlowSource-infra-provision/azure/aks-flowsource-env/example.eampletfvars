@@ -1,0 +1,41 @@
+subscription_id = ""
+
+tenant_id = ""
+client_id = ""
+client_secret = ""
+
+rg_name = "RG-Skygrade-Morpheus-dev"
+rg_location = "eastus"
+
+cluster_name = "test-cluster"
+node_vm_size = "Standard_D2_v2"
+min_count = 1
+max_count = 3
+vnet = "Vnet-ADM-Flowsource-Dev"
+aks-subnet = "Flowsourcek8ssubnet"
+db-subnet = "flowsourcedbsubnet"
+
+datadog_enable = false
+database_enable = true
+
+database_server_name = "flowsource-db-server"
+database_name = "backstage"
+database_sku = "B_Standard_B1ms"
+
+database_storage_mb = 32768
+
+database_user = "backstage"
+database_password = "Welcome@123"
+
+database_geo_redundant_backup_enabled = false
+database_backup_retention_days = 8
+
+agic_enable_flag = true
+
+namespaces = ["flowsource", "nginx-ingress"]
+
+user_managed_identity_cp = "flowsource-test-cp"
+user_managed_identity_kubelet = "flowsource-test"
+
+node_vm_type = "Ubuntu"
+cluster_version = "1.31"

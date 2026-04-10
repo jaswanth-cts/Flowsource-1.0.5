@@ -1,0 +1,264 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-pdlc-cluster-template-backend
+  title: Create PDLC Backend Template AWS
+  description: Create a new PDLC Backend template
+  tags:
+    - pdlc
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+    - title: Provide some information to create PDLC Backend component
+      required:
+        - name
+        - owner
+      properties:
+        name: 
+          title: Component Name
+          type: string
+          description: PDLC component
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds:
+            - Group
+    - title: Infra specific information
+      required:
+        - awsRegion
+        - lambdaExecutionIamRole
+        - securityGroup
+        - subnets
+        - vpcEndpointId
+        - bedrockRole
+        - knowledgeBaseS3BucketName
+        - pymtErrorAgentModel
+        - pymtErrorknowledgeBaseModel
+        - userStoryAgentModel
+        - userStoryKnowledgeBaseModel
+        - stakeholderInfoAgentModel
+        - stakeholderInfoKnowledgeBaseModel
+        - deploymentChecklistAgentModel
+        - deploymentChecklistKnowledgeBaseModel
+        - projectRoadmapAgentModel
+        - projectRoadmapKnowledgeBaseModel
+        - knowledgeBaseArticleAgentModel
+        - knowledgeBaseArticleKnowledgeBaseModel
+        - testCaseCreationAgentModel
+        - testCaseCreationKnowledgeBaseModel
+        - regulatoryComplianceAgentModel
+        - regulatoryComplianceKnowledgeBaseModel
+        - apiGatewaySourceVpcId
+        - apiGatewayPrivateEndpoint
+        - eksIrsaRoleArn
+      properties:
+        awsRegion:
+          title: AWS Region
+          type: string
+          description: AWS region to deploy the component
+        lambdaExecutionIamRole: 
+          title: Lambda Execution IAM Role
+          type: string
+          description: Lambda execution IAM role
+        securityGroup:
+          title: Security Group
+          type: string
+          description: Security group
+        subnets:
+          title: Subnets
+          type: string
+          description: Subnets
+        vpcEndpointId:
+          title: VPC Endpoint ID
+          type: string
+          description: VPC endpoint id
+        bedrockRole:
+          title: Bedrock Role
+          type: string
+          description: Bedrock role
+        knowledgeBaseS3BucketName:
+          title: Knowledge Base S3 Bucket Name
+          type: string
+          description: Knowledge base s3 bucket name
+        pymtErrorAgentModel:
+          title: Pymt Error Agent Model
+          type: string
+          description: Pymt error agent model
+        pymtErrorknowledgeBaseModel:  
+          title: Pymt Error Knowledge Base Model
+          type: string
+          description: Pymt error knowledge base model
+        userStoryAgentModel:
+          title: User Story Agent Model
+          type: string
+          description: User story agent model
+        userStoryKnowledgeBaseModel:
+          title: User Story Knowledge Base Model
+          type: string
+          description: User story knowledge base model
+        stakeholderInfoAgentModel:
+          title: Stakeholder Info Agent Model
+          type: string
+          description: Stakeholder info agent model
+        stakeholderInfoKnowledgeBaseModel:  
+          title: Stakeholder Info Knowledge Base Model
+          type: string
+          description: Stakeholder info knowledge base model
+        deploymentChecklistAgentModel:
+          title: Deployment Checklist Agent Model
+          type: string
+          description: Deployment checklist agent model
+        deploymentChecklistKnowledgeBaseModel:
+          title: Deployment Checklist Knowledge Base Model
+          type: string
+          description: Deployment checklist knowledge base model
+        projectRoadmapAgentModel:
+          title: Project Roadmap Agent Model
+          type: string
+          description: Project roadmap agent model
+        projectRoadmapKnowledgeBaseModel:
+          title: Project Roadmap Knowledge Base Model
+          type: string
+          description: Project roadmap knowledge base model
+        knowledgeBaseArticleAgentModel:
+          title: Knowledge Base Article Agent Model
+          type: string
+          description: Knowledge base article agent model
+        knowledgeBaseArticleKnowledgeBaseModel:
+          title: Knowledge Base Article Knowledge Base Model
+          type: string
+          description: Knowledge base article knowledge base model
+        testCaseCreationAgentModel:
+          title: Test Case Creation Agent Model
+          type: string
+          description: Test case creation agent model
+        testCaseCreationKnowledgeBaseModel:
+          title: Test Case Creation Knowledge Base Model
+          type: string
+          description: Test case creation knowledge base model
+        regulatoryComplianceAgentModel:
+          title: Regulatory Compliance Agent Model
+          type: string
+          description: Regulatory compliance agent model
+        regulatoryComplianceKnowledgeBaseModel:
+          title: Regulatory Compliance Knowledge Base Model
+          type: string
+          description: Regulatory compliance knowledge base model
+        apiGatewaySourceVpcId:
+          title: Flowsorce VPC ID
+          type: string
+          description: VPC ID where flowsource is deployed
+        apiGatewayPrivateEndpoint:
+          title: API Gateway Private Endpoint
+          type: string
+          description: VPC private endpoint of the API Gateway 
+        eksIrsaRoleArn:
+          title: EKS IRSA Role ARN
+          type: string
+          description: Flowsource EKS CLuster's IRSA Role ARN   
+        
+    - title: Choose a location
+      required:
+        - repoUrl 
+        - branch
+        # -----------------Uncomment the below lines for the case where repository already exists---------------
+        # - title
+        # - description
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com        
+        branch:
+          title: Branch
+          type: string
+          default: main
+          description: Git branch to use (default is "main")
+        # -----------------Uncomment the below lines for the case where repository already exists---------------
+        # -----------------This will add title and description to the pull request-----------------
+        # title:
+        #   title: Title
+        #   type: string
+        #   description: Title of the pull request
+        # description:
+        #   title: Description
+        #   type: string
+        #   description: Description of the pull request
+
+  steps:
+    - id: template
+      name: Fetch Skeleton + Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          owner: ${{ parameters.owner }}
+          awsRegion: ${{ parameters.awsRegion }}
+          lambdaExecutionIamRole: ${{ parameters.lambdaExecutionIamRole }}
+          securityGroup: ${{ parameters.securityGroup }}
+          subnets: ${{ parameters.subnets }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+          vpcEndpointId: ${{ parameters.vpcEndpointId }}
+          bedrockRole: ${{ parameters.bedrockRole }}
+          knowledgeBaseS3BucketName: ${{ parameters.knowledgeBaseS3BucketName }}
+          pymtErrorAgentModel: ${{ parameters.pymtErrorAgentModel }}
+          pymtErrorknowledgeBaseModel: ${{ parameters.pymtErrorknowledgeBaseModel }}
+          userStoryAgentModel: ${{ parameters.userStoryAgentModel }}
+          userStoryKnowledgeBaseModel: ${{ parameters.userStoryKnowledgeBaseModel }}
+          stakeholderInfoAgentModel: ${{ parameters.stakeholderInfoAgentModel }}
+          stakeholderInfoKnowledgeBaseModel: ${{ parameters.stakeholderInfoKnowledgeBaseModel }}
+          deploymentChecklistAgentModel: ${{ parameters.deploymentChecklistAgentModel }}
+          deploymentChecklistKnowledgeBaseModel: ${{ parameters.deploymentChecklistKnowledgeBaseModel }}
+          projectRoadmapAgentModel: ${{ parameters.projectRoadmapAgentModel }}
+          projectRoadmapKnowledgeBaseModel: ${{ parameters.projectRoadmapKnowledgeBaseModel }}
+          knowledgeBaseArticleAgentModel: ${{ parameters.knowledgeBaseArticleAgentModel }}
+          knowledgeBaseArticleKnowledgeBaseModel: ${{ parameters.knowledgeBaseArticleKnowledgeBaseModel }}
+          testCaseCreationAgentModel: ${{ parameters.testCaseCreationAgentModel }}
+          testCaseCreationKnowledgeBaseModel: ${{ parameters.testCaseCreationKnowledgeBaseModel }}
+          regulatoryComplianceAgentModel: ${{ parameters.regulatoryComplianceAgentModel }}
+          regulatoryComplianceKnowledgeBaseModel: ${{ parameters.regulatoryComplianceKnowledgeBaseModel }}
+          apiGatewaySourceVpcId: ${{ parameters.apiGatewaySourceVpcId }}
+          apiGatewayPrivateEndpoint: ${{ parameters.apiGatewayPrivateEndpoint }}
+          eksIrsaRoleArn: ${{ parameters.eksIrsaRoleArn }}
+    # -----------------Comment the below lines for the case where repository already exists---------------
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        allowedHosts: ["github.com"]
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: ${{ parameters.branch }}
+    # -----------------Uncomment the below lines for the case where repository already exists---------------
+    # - id: publish
+    #   name: Publish
+    #   action: publish:github:pull-request
+    #   input:
+    #     allowedHosts: ["github.com"]
+    #     repoUrl: ${{ parameters.repoUrl }}
+    #     branchName: ${{ parameters.branch }}
+    #     title: ${{ parameters.title }}
+    #     description: ${{ parameters.description }}
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        # -----------------Comment the below lines for the case where repository already exists---------------
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        # -----------------Uncomment the below line for the case where repository already exists---------------
+        # repoContentsUrl: https://${{ (parameters.repoUrl | parseRepoUrl).host }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}/blob/${{ parameters.branch }}
+        catalogInfoPath: "/catalog-info.yaml"
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

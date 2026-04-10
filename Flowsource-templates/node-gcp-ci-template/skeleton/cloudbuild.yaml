@@ -1,0 +1,131 @@
+serviceAccount: $SERVICE_ACCOUNT_EMAIL
+logsBucket: ${{values.gcp_logs_bucket}}
+
+substitutions:
+  _REPO_SHORT: ${REPO_NAME:0:63}
+  _IMAGE_NAME: ${_REPO_SHORT,,}
+
+steps:
+- name: 'debian'
+  entrypoint: 'bash'
+  id: 'Scan Nestjs project inside a specific directory'
+  args:
+    - '-c'
+    - |
+      apt-get update && apt-get install -y curl unzip openjdk-17-jdk
+      curl -sL https://deb.nodesource.com/setup_14.x | bash -
+      apt-get install -y nodejs
+      mkdir -p /usr/local/bin/checkmarx-cli
+      curl -o /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -L https://download.checkmarx.com/9.5.0/Plugins/CxConsolePlugin-1.1.30.zip
+      unzip /usr/local/bin/checkmarx-cli/cxconsoleplugin.zip -d /usr/local/bin/checkmarx-cli/
+      chmod +x /usr/local/bin/checkmarx-cli/runCxConsole.sh
+      sourceLocation=$(pwd)
+      /usr/local/bin/checkmarx-cli/runCxConsole.sh Scan -v \
+        -CxServer "$$SCANURL" \
+        -CxUser "$$SCANUSER" \
+        -CxPassword "$$SCANPASS" \
+        -ProjectName "$$SCANTEAM\\${{values.checkmarx_project_name}}" \
+        -LocationType "folder" \
+        -LocationPath "$sourceLocation/" \
+        -preset "Cognizant Default Preset" \
+        -ReportPDF "$sourceLocation/${{values.checkmarx_project_name}}.pdf"
+  secretEnv: ['SCANURL', 'SCANPASS', 'SCANUSER', 'SCANTEAM']
+
+- name: 'node'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      npm install
+      npm run test
+
+- name: 'debian'
+  entrypoint: 'bash'
+  id: 'BDH Scan of Nestjs project'
+  args:
+    - '-c'
+    - |
+      apt-get update && apt-get install -y curl unzip openjdk-17-jdk
+      curl -s -L "$${BDHDETECTURL}" | bash -s -- \
+          --blackduck.url=$$BDHURL \
+          --blackduck.api.token=$$BDHTOKEN \
+          --detect.project.name="${{values.blackduck_project_name}}" \
+          --detect.project.version.name="ver.1" \
+          --blackduck.trust.cert=true \
+          --detect.timeout=3600 \
+          --detect.detector.search.depth=0 \
+          --detect.tools=ALL,IAC_SCAN \
+          --detect.blackduck.signature.scanner.individual.file.matching=ALL \
+          --detect.accuracy.required=NONE \
+          --detect.detector.search.continue=true \
+          --logging.level.com.synopsys.integration=DEBUG \
+          --detect.risk.report.pdf=true \
+          --detect.risk.report.pdf.path="report" \
+          --detect.blackduck.signature.scanner.snippet.matching=SNIPPET_MATCHING \
+          --detect.excluded.directories=.git
+  secretEnv: ['BDHDETECTURL', 'BDHURL', 'BDHTOKEN']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/sonar-scanner:latest', '.']
+
+- name: 'gcr.io/$PROJECT_ID/sonar-scanner:latest'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      cd /app/sonar-scanner
+      wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip
+      unzip sonar-scanner.zip
+      mv sonar-scanner-4.6.2.2472-linux sonar-scanner
+      sed -i 's/use_embedded_jre=true/use_embedded_jre=false/g' sonar-scanner/bin/sonar-scanner
+      ./sonar-scanner/bin/sonar-scanner \
+        -Dsonar.projectKey=${{values.sonar_project_key}} \
+        -Dsonar.host.url=$$SonarUrl \
+        -Dsonar.login=$$SonarToken \
+        -Dsonar.sources=. \
+        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+  secretEnv: ['SonarToken', 'SonarUrl']
+    
+- name: 'Create Repository In Artifact'
+  id: 'create-repo'
+  name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args: 
+    - '-c'
+    - |
+      if ! gcloud artifacts repositories list --location=${{values.gcp_location}} | grep -q ${{values.gcp_artifact_registry_repo_name}}; then
+        gcloud artifacts repositories create ${{values.gcp_artifact_registry_repo_name}} --repository-format=docker --location=${{values.gcp_location}} --description="My Docker repository"
+      fi
+  
+- name: 'Build Docker Image and Push Docker image to Artifact Registry'
+  id: 'build-images'
+  name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      docker build -t ${{values.gcp_location}}-docker.pkg.dev/$PROJECT_ID/${{values.gcp_artifact_registry_repo_name}}/${_IMAGE_NAME}:${COMMIT_SHA} .
+      docker tag ${{values.gcp_location}}-docker.pkg.dev/$PROJECT_ID/${{values.gcp_artifact_registry_repo_name}}/${_IMAGE_NAME}:${COMMIT_SHA} ${{values.gcp_location}}-docker.pkg.dev/$PROJECT_ID/${{values.gcp_artifact_registry_repo_name}}/${_IMAGE_NAME}:latest
+      docker push ${{values.gcp_location}}-docker.pkg.dev/$PROJECT_ID/${{values.gcp_artifact_registry_repo_name}}/${_IMAGE_NAME}:${COMMIT_SHA}
+      docker push ${{values.gcp_location}}-docker.pkg.dev/$PROJECT_ID/${{values.gcp_artifact_registry_repo_name}}/${_IMAGE_NAME}:latest
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/CheckmarxUrl/versions/1
+    env: SCANURL
+  - versionName: projects/$PROJECT_ID/secrets/CheckmarxPassword/versions/1
+    env: SCANPASS
+  - versionName: projects/$PROJECT_ID/secrets/CheckmarxUsername/versions/1
+    env: SCANUSER
+  - versionName: projects/$PROJECT_ID/secrets/CheckmarxTeam/versions/1
+    env: SCANTEAM
+  - versionName: projects/$PROJECT_ID/secrets/SonarToken/versions/1
+    env: SonarToken
+  - versionName: projects/$PROJECT_ID/secrets/SonarUrl/versions/1
+    env: SonarUrl
+  - versionName: projects/$PROJECT_ID/secrets/BLACKDUCKDETECTURL/versions/1
+    env: BDHDETECTURL
+  - versionName: projects/$PROJECT_ID/secrets/BLACKDUCKURL/versions/1
+    env: BDHURL
+  - versionName: projects/$PROJECT_ID/secrets/BLACKDUCKTOKEN/versions/1
+    env: BDHTOKEN

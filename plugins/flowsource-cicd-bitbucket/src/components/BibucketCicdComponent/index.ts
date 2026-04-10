@@ -1,0 +1,1 @@
+export {BitbucketCicdComponent}  from './BitbucketCicdComponent';

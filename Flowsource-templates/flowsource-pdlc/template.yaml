@@ -1,0 +1,63 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: flowsource-pdlc-template
+  title: FlowSource PDLC Template
+  description: Create a FlowSource PDLC Template with a GitHub repository.
+  tags:
+    - pdlc
+spec:
+  owner: group:catalog-admin
+  type: website
+  parameters:
+    - title: Choose a location
+      required:
+        - repoUrl 
+        - branch
+        - title
+        - description
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com        
+        branch:
+          title: Branch
+          type: string
+          default: main
+          description: Git branch to use (default is "main")
+        title:
+          title: Title
+          type: string
+          description: Title of the pull request
+        description:
+          title: Description
+          type: string
+          description: Description of the pull request
+
+  steps:
+    - id: template
+      name: Fetch Skeleton + Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        copyWithoutRender:
+        - .github/workflows/*
+        values:
+          http_port: 8080
+    - id: publish
+      name: Publish
+      action: publish:github:pull-request
+      input:
+        allowedHosts: ["github.com"]
+        repoUrl: ${{ parameters.repoUrl }}
+        branchName: ${{ parameters.branch }}
+        title: ${{ parameters.title }}
+        description: ${{ parameters.description }}
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}

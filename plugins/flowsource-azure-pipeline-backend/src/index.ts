@@ -1,0 +1,1 @@
+export { flowsourceAzurePipelineBackendPlugin as default } from './plugin'

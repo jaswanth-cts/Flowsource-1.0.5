@@ -1,0 +1,21 @@
+apiVersion: v1
+data:
+  oauth2-proxy.cfg: |-
+    provider="github"
+    cookie_secure=true
+    http_address="0.0.0.0:4180"
+    upstreams=["INGRESS_BASE_URL"]
+    redirect_url = "INGRESS_BASE_URL/oauth2/callback"
+    email_domains=["*"]
+    whitelist_domains=["INGRESS_DNS:*"]
+    set_xauthrequest=true
+    skip_auth_strip_headers=false
+    set_authorization_header=true
+    pass_authorization_header=true
+    pass_basic_auth=true
+    pass_user_headers=true
+    pass_host_header=true
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy-config
+  namespace: oauth2-proxy
