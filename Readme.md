@@ -11,7 +11,7 @@ This folder (`flowsource-pdlc`) contains the PDLC plugin skeleton, which is esse
 1. **Copy the Skeleton:**
    - When you need to use the PDLC plugin, copy the `flowsource-pdlc` folder from this location to the `plugins` section of your `flowsource-core` project.
 2. **Integrate with Flowsource Core:**
-   - After copying, Flowsource Core will recognize and utilize the PDLC plugin for your workflows.
+   - After copying, Flowsource Core will recognize and utilize the PDLC plugin for your workflows and structure.
 
 ## Notes
 - Make sure to keep this skeleton updated to benefit from new features and improvements.
