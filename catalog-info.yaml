@@ -1,8 +1,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: "Sample-App-From-Github"
-  appid: "sample-app"
+  name: "Sample"
+  appid: "sample"
   description: |
     The customer authorises payment via an online form allowing the business to automatically collect the funds when due. The business' bank and the customer's bank communicate and action the payment request when the payment is due, ensuring the correct amount is debited from the customer and credited to the business.
   links:
@@ -26,6 +26,7 @@ metadata:
     flowsource/github-repo-owner : jaswanth-cts
     flowsource/github-repo-name: Flowsource-1.0.5
     flowsource/github-host: github.com
+    flowsource/jmeter-app-name: app1
     # flowsource/veracode-app-name: dummy
     # blackduck/project: automation-center-messageinterface/ver.1
     # flowsource/fis-aws-region: us-east-2
